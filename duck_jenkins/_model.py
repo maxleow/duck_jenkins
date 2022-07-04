@@ -68,7 +68,7 @@ class Base(BaseModel):
         except RuntimeError:
             cls.__cursor__.query(cls.get_schema())
             result = cls.__cursor__.query(sql).to_df().to_dict('records')
-        if len(result) is 1:
+        if len(result) == 1:
             return cls(**result[0])
         return [cls(**r) for r in result]
 

@@ -1,0 +1,8 @@
+pandas
+testrail-api<2
+responses
+requests
+pytest
+jsonpath-ng
+pydantic
+duckdb

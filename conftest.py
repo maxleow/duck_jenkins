@@ -1,6 +1,6 @@
 from pathlib import Path
 import pytest
-
+from duck_jenkins import JenkinsData
 
 
 BASE_HOST = 'https://example.jekins.io'
@@ -23,7 +23,7 @@ def auth_data(host):
 
 
 @pytest.fixture
-def api(auth_data):
-    api = TestRailAPI(*auth_data)
+def JenkinsData(auth_data):
+    api = JenkinsData(*auth_data)
     yield api
 

@@ -1,9 +1,10 @@
-from pathlib import Path
 import pytest
 from duck_jenkins import JenkinsData
+import os
+import shutil
 
-
-BASE_HOST = 'https://example.jekins.io'
+BASE_HOST = 'example.jenkins.io'
+WORKING_DIR = os.path.abspath('.') + '/tests/temp'
 
 
 @pytest.fixture(scope='session')
@@ -12,18 +13,25 @@ def host():
 
 
 @pytest.fixture(scope='session')
-def base_path():
-    path = Path(__file__).absolute().parent
-    yield str(path)
-
-
-@pytest.fixture(scope='session')
 def auth_data(host):
-    yield host, 'example@mail.com', 'password'
+    yield {
+        'domain_name': host,
+        'data_directory': WORKING_DIR,
+        'verify_ssl': 'password',
+        'user_id': 'john',
+        'secret': 'password'
+    }
+
+
+@pytest.fixture(autouse=True)
+def run_around_tests():
+    delete_dir = WORKING_DIR
+    if os.path.exists(delete_dir):
+        shutil.rmtree(delete_dir)
+    os.makedirs(delete_dir)
 
 
 @pytest.fixture
-def JenkinsData(auth_data):
-    api = JenkinsData(*auth_data)
-    yield api
-
+def jenkins_data(auth_data):
+    jd = JenkinsData(**auth_data)
+    yield jd

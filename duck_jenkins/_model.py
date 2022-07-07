@@ -5,6 +5,7 @@ import pandas as pd
 import os
 
 from duck_jenkins._utils import json_lookup
+import logging
 
 
 class Base(BaseModel):
@@ -27,7 +28,7 @@ class Base(BaseModel):
             sql_insert: str
     ):
         def get_obj():
-            print("SQL> ", sql_select)
+            logging.debug("SQL> ", sql_select)
 
             def get_result():
                 result = cls.__cursor__.query(sql_select).to_df().to_dict('records')
@@ -41,7 +42,7 @@ class Base(BaseModel):
         obj = get_obj()
         if obj:
             return obj
-        print("SQL> ", sql_insert)
+        logging.debug("SQL> ", sql_insert)
         cls.__cursor__.query(sql_insert)
         obj = get_obj()
         assert obj, 'object is None'
@@ -62,7 +63,7 @@ class Base(BaseModel):
     @classmethod
     def select(cls, **kwargs):
         sql = cls.select_query(**kwargs)
-        print("SQL> ", sql)
+        logging.debug("SQL> ", sql)
         try:
             result = cls.__cursor__.query(sql).to_df().to_dict('records')
         except RuntimeError:
@@ -147,7 +148,8 @@ class Result(Base):
         INSERT INTO {cls.__table_name__} VALUES
           (1, 'SUCCESS'),
           (2, 'FAILURE'),
-          (3, 'ABORTED')
+          (3, 'ABORTED'),
+          (4, 'UNSTABLE')
         """
 
 
@@ -299,24 +301,24 @@ class Build(Base):
     @classmethod
     def insert(cls, json_file: str, job: Job):
         build_number = json_lookup(json_file, '$.number')
-        print('build number:', build_number)
+        logging.debug('build number:', build_number)
 
         result = json_lookup(json_file, '$.result')
         result_obj = Result.assign_cursor(cls.__cursor__).select(name=result)
-        print('result: ', result_obj)
+        logging.debug('result: ', result_obj)
 
         duration = json_lookup(json_file, '$.duration')
-        print('duration: ', duration)
+        logging.debug('duration: ', duration)
 
         timestamp = json_lookup(json_file, '$.timestamp')
-        print('timestamp: ', timestamp)
+        logging.debug('timestamp: ', timestamp)
 
         previous_build_number = json_lookup(json_file, '$.previousBuild.number')
         previous_build_number = previous_build_number if previous_build_number else 0
-        print('previous build: ', previous_build_number)
+        logging.debug('previous build: ', previous_build_number)
 
         causes_extracted = Cause.assign_cursor(cls.__cursor__).extract(json_file, job.jenkins_id)
-        print('causes extracted: ', causes_extracted)
+        logging.debug('causes extracted: ', causes_extracted)
 
         return cls.factory(
             job=job,
@@ -331,11 +333,6 @@ class Build(Base):
             upstream_type=causes_extracted['upstream_type'],
             previous_build_number=previous_build_number
         )
-
-    @staticmethod
-    def debug(**kwargs):
-        print(kwargs)
-        assert False, 'stop here'
 
 
 class ParameterDictionary(Base):
@@ -413,8 +410,8 @@ class Artifact(Base):
     id: int
     build_id: int
     file_name: str
-    dir_name: str
-    size: float
+    dir: str
+    size: int
     timestamp: datetime
 
     @classmethod
@@ -425,22 +422,22 @@ class Artifact(Base):
             id         UBIGINT DEFAULT NEXTVAL('seq_{cls.__table_name__}'),
             build_id   UBIGINT,
             file_name  VARCHAR,
-            dir_name   VARCHAR,
-            size       FLOAT8,
+            dir        VARCHAR,
+            size       UBIGINT,
             timestamp  TIMESTAMP,
             PRIMARY KEY(id)   
         )
         """
 
     @staticmethod
-    def size_in_byte(size: str):
+    def size_in_byte(size: str)-> int:
         x = str(size).split(' ')
         if len(x) < 2:
             return size
 
         unit = x[1].upper()
         if unit == 'B':
-            return float(x[0])
+            return int(x[0])
         if unit == 'KB':
             return float(x[0]) * 1024
         if unit == 'MB':
@@ -450,24 +447,7 @@ class Artifact(Base):
         if unit == 'TB':
             return float(x[0]) * 1024 ** 4
 
-        return x
-
-    @classmethod
-    def factory(cls, build_id: int, file_name: str,
-                dir_name: str, size: float, timestamp: int):
-        select = cls.select_query(
-            build_id=build_id,
-            file_name=file_name,
-            dir_name=dir_name
-        )
-        insert = cls.insert_query(
-            build_id=build_id,
-            file_name=file_name,
-            dir_name=dir_name,
-            size=size,
-            timestamp=timestamp
-        )
-        cls.insert_if_not_exist(select, insert)
+        return int(x)
 
     @classmethod
     def insert(cls, build: Build, data_dir: str):
@@ -478,17 +458,19 @@ class Artifact(Base):
         if not os.path.exists(_dir):
             return
 
+        if cls.select(build_id=build.id):
+            logging.info(f"skipping inserted build: {build.id}")
+            return
+
         df = pd.read_csv(_dir)
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%b %d, %Y %I:%M:%S %p').astype(str)
         df['size'] = df['size'].apply(lambda x: cls.size_in_byte(x))
         df = df.fillna('')
 
-        for a in df.to_dict('records'):
-            print('records', a)
-            cls.factory(
-                build_id=build.id,
-                file_name=a['file_name'],
-                dir_name=a['dir'],
-                size=a['size'],
-                timestamp=a['timestamp']
-            )
+        df.to_sql(
+            name=cls.__table_name__,
+            con=cls.__cursor__,
+            if_exists='append',
+            index=False,
+            method='multi'
+        )

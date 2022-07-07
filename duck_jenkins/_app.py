@@ -5,10 +5,13 @@ import re
 import pandas as pd
 import io
 import requests
+
 from duckdb import DuckDBPyConnection
 
 from duck_jenkins._model import Job, Build, Parameter, Artifact, Jenkins
 from duck_jenkins._utils import to_json, upstream_lookup, json_lookup
+import logging
+import time
 
 
 class JenkinsData:
@@ -16,6 +19,7 @@ class JenkinsData:
     verify_ssl: bool = True
     auth: bool = False
     user_id: str = None
+
     def __init__(
             self,
             domain_name: str,
@@ -46,7 +50,7 @@ class JenkinsData:
             dfs = []
             for d in dirs:
                 full_url = url + f'/artifact/{d}'
-                print(full_url)
+                logging.info(full_url)
                 get = requests.get(
                     full_url,
                     auth=self.__auth,
@@ -64,7 +68,7 @@ class JenkinsData:
                     continue
 
             if dfs:
-                print('writing artifact: ', target)
+                logging.info('writing artifact: %s', target)
                 pd.concat(dfs).to_csv(target, index=False)
 
         if overwrite:
@@ -72,7 +76,7 @@ class JenkinsData:
         elif not os.path.exists(target):
             request()
         else:
-            print('skipping artifact: ', build_number)
+            logging.info('skipping artifact: %s', build_number)
 
     def pull(
             self,
@@ -85,10 +89,10 @@ class JenkinsData:
             overwrite: bool = False,
     ):
         json_file = self.data_directory + f'/{project_name}/{build_number}_info.json'
-        ok = True
+        logging.info('Overwrite: %s', overwrite)
 
         def request():
-            print("Pulling: ", project_name, build_number)
+            logging.info(f"Pulling: {project_name} {build_number}")
             url = "https://{}/job/{}/{}/api/json".format(
                 self.domain_name,
                 project_name.replace('/', '/job/'),
@@ -96,7 +100,7 @@ class JenkinsData:
             )
             get = requests.get(url, auth=self.__auth, verify=self.verify_ssl)
             if get.ok:
-                print('writing to:', json_file)
+                logging.info('writing to: %s', json_file)
                 to_json(json_file, get.json())
             return get.ok
 
@@ -105,9 +109,9 @@ class JenkinsData:
         elif not os.path.exists(json_file):
             ok = request()
         else:
-            print('skipping request: ', project_name, build_number)
-            print('found at: ', json_file)
-            # return
+            logging.info('skipping request: %s %s', project_name, build_number)
+            logging.info('found at: %s', json_file)
+            return
 
         if ok:
             if artifact:
@@ -127,14 +131,14 @@ class JenkinsData:
         if recursive_previous:
             previous_build = build_number - 1
             _trial = self.skip_trial if ok else recursive_previous_trial
-            print('remaining trial:', _trial)
+            logging.info('remaining trial: %s', _trial)
             if _trial > 0:
                 self.pull(
                     project_name=project_name,
                     build_number=previous_build,
                     recursive_upstream=recursive_upstream,
                     recursive_previous=recursive_previous - 1,
-                    recursive_previous_trial=_trial-1,
+                    recursive_previous_trial=_trial - 1,
                     artifact=artifact,
                     overwrite=overwrite
                 )
@@ -145,45 +149,66 @@ class DuckLoader:
         self.cursor = cursor
         self.data_directory = jenkins_data_directory
 
-    def get_last_updated_build(self, job_name: str):
-        sql = "SELECT build_number " \
-              "FROM build left join job on build.job_id=job.id " \
-              f"WHERE job.name='{job_name}' " \
-              "order by build.build_number desc limit 1"
-        return self.cursor.query(sql).fetchone()
+    @staticmethod
+    def insert_build(
+            job_dir: str,
+            jenkins_domain_name: str,
+            data_dir: str,
+            cursor: DuckDBPyConnection,
+            overwrite: bool = False
+    ):
+        regex = f"{jenkins_domain_name}/(.*)/(.*)_info.json"
+        file_names = glob.glob(job_dir + "/*.json")
+        file_names.sort()
+        for file_name in file_names:
+            job_name = re.search(regex, file_name).group(1)
+            build_number = re.search(regex, file_name).group(2)
+            jenkins = Jenkins.assign_cursor(cursor).factory(jenkins_domain_name)
+            job = Job.assign_cursor(cursor).factory(job_name, jenkins.id)
+            build = Build.assign_cursor(cursor).select(build_number=build_number, job_id=job.id)
+            logging.info(f"job_name: {job_name}, build_number: {build_number}, build: {build}")
+            if build:
+                logging.info(f'skipping inserted build: {build.id}')
+                return
+            if overwrite or not build:
+                logging.info(f'######## Build ########')
+                st = time.time()
+                b = Build.assign_cursor(cursor).insert(file_name, job)
+                logging.debug(f"Execution time: {time.time() - st}s")
 
-    def import_into_db(self, jenkins_domain_name: str):
-        regex = f"{jenkins_domain_name}/(.*)/.*.json"
-        jenkins = Jenkins.assign_cursor(self.cursor).factory(jenkins_domain_name)
+                logging.info('######## Parameters ########')
+                st = time.time()
+                Parameter.assign_cursor(cursor).insert(file_name, b.id)
+                logging.debug(f"Execution time: {time.time() - st}s")
 
-        job = Job.assign_cursor(self.cursor)
-        build = Build.assign_cursor(self.cursor)
-        parameter = Parameter.assign_cursor(self.cursor)
-        artifact = Artifact.assign_cursor(self.cursor)
+                logging.info('######## Artifacts ########')
+                st = time.time()
+                Artifact.assign_cursor(cursor).insert(build=b, data_dir=data_dir)
+                logging.debug(f"Execution time: {time.time() - st}s")
+                logging.info('---')
 
-        job_paths = glob.glob(f"{jenkins_domain_name}/*")
-        print(job_paths)
+    def import_into_db(self, jenkins_domain_name: str, overwrite: bool = False):
 
-        def insert_build(_job: Job, _json_files: list):
-            for f in _json_files:
-                print('### Build ###')
-                b = build.insert(f, _job)
-
-                print('### Parameters ###')
-                parameter.insert(f, b.id)
-
-                print('### Artifacts ###')
-                artifact.insert(build=b, data_dir=self.data_directory)
-                print('---')
+        job_paths = glob.glob(f"{self.data_directory}/{jenkins_domain_name}/*")
+        logging.debug(job_paths)
 
         for job_path in job_paths:
-            non_feature_branch_json_files = glob.glob(job_path + "/*.json")
-            if non_feature_branch_json_files:
-                job_name = re.search(regex, non_feature_branch_json_files[0]).group(1)
-                insert_build(job.factory(job_name, jenkins.id), non_feature_branch_json_files)
+            job_dir = glob.glob(job_path + "/*.json")
+            if not job_dir:
+                job_dirs = glob.glob(job_path + "/*")
+                for job_dir in job_dirs:
+                    DuckLoader.insert_build(
+                        job_dir=job_dir,
+                        jenkins_domain_name=jenkins_domain_name,
+                        data_dir=self.data_directory,
+                        cursor=self.cursor,
+                        overwrite=overwrite
+                    )
             else:
-                feature_branches = glob.glob(job_path + "/*")
-                for branch in feature_branches:
-                    json_files = glob.glob(branch + "/*_info.json")
-                    job_name = re.search(regex, json_files[0]).group(1)
-                    insert_build(job.factory(job_name, jenkins.id), json_files)
+                DuckLoader.insert_build(
+                    job_dir=job_path,
+                    jenkins_domain_name=jenkins_domain_name,
+                    data_dir=self.data_directory,
+                    cursor=self.cursor,
+                    overwrite=overwrite
+                )

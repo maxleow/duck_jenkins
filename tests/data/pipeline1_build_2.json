@@ -1,0 +1,78 @@
+{
+  "_class": "org.jenkinsci.plugins.workflow.job.WorkflowRun",
+  "actions": [
+    {
+      "_class": "hudson.model.CauseAction",
+      "causes": [
+        {
+          "_class": "org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause",
+          "shortDescription": "Started by upstream project \"pipeline2/master\" build number 1",
+          "upstreamBuild": 1,
+          "upstreamProject": "pipeline2/master",
+          "upstreamUrl": "job/pipeline2/job/master/"
+        }
+      ]
+    },
+    {
+      "_class": "hudson.model.ParametersAction",
+      "parameters": [
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "PRODUCT_BUILDS",
+          "value": "software-a :: develop,9053"
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "CREATE_AMI",
+          "value": false
+        }
+      ]
+    },
+    {
+      "_class": "jenkins.metrics.impl.TimeInQueueAction",
+      "blockedDurationMillis": 0,
+      "blockedTimeMillis": 0,
+      "buildableDurationMillis": 0,
+      "buildableTimeMillis": 0,
+      "buildingDurationMillis": 1475419,
+      "executingTimeMillis": 1475419,
+      "executorUtilization": 1.0,
+      "subTaskCount": 0,
+      "waitingDurationMillis": 5397,
+      "waitingTimeMillis": 5397
+    }
+  ],
+  "artifacts": [
+    {
+      "displayPath": "a/command-stdout.log",
+      "fileName": "command-stdout.log",
+      "relativePath": "a/command-stdout.log"
+    },
+    {
+      "displayPath": "b/cucumber.json",
+      "fileName": "cucumber.json",
+      "relativePath": "b/cucumber.json"
+    }
+  ],
+  "building": false,
+  "description": "pcrf / windows / zulujdk_11",
+  "displayName": "#2",
+  "duration": 1475419,
+  "estimatedDuration": 1353693,
+  "executor": null,
+  "fullDisplayName": "pipeline » master #2",
+  "id": "2",
+  "keepLog": false,
+  "number": 2,
+  "queueId": 8771,
+  "result": "SUCCESS",
+  "timestamp": 1657087777051,
+  "url": "https://example.jenkins.io/job/pipeline1/job/master/2/",
+  "changeSets": [],
+  "culprits": [],
+  "nextBuild": null,
+  "previousBuild": {
+    "number": 3,
+    "url": "https://example.jenkins.io/job/pipeline1/job/master/3/"
+  }
+}

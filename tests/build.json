@@ -1,0 +1,358 @@
+{
+  "_class": "org.jenkinsci.plugins.workflow.job.WorkflowRun",
+  "actions": [
+    {
+      "_class": "hudson.model.CauseAction",
+      "causes": [
+        {
+          "_class": "org.jenkinsci.plugins.workflow.support.steps.build.BuildUpstreamCause",
+          "shortDescription": "Started by upstream project \"wrapper-pcr-sanity-test-runtime-customer-management-dev/master\" build number 271",
+          "upstreamBuild": 271,
+          "upstreamProject": "wrapper-pcr-sanity-test-runtime-customer-management-dev/master",
+          "upstreamUrl": "job/wrapper-pcr-sanity-test-runtime-customer-management-dev/job/master/"
+        }
+      ]
+    },
+    {},
+    {
+      "_class": "hudson.model.ParametersAction",
+      "parameters": [
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "PRODUCT_BUILDS",
+          "value": "software-powercurve :: develop,9053"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "PROJECT_NAME",
+          "value": "cmrf"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "TEST_FILTER_OPTION",
+          "value": "files"
+        },
+        {
+          "_class": "hudson.model.TextParameterValue",
+          "name": "TEST_FILTER_OPTION_DETAILS",
+          "value": ".*Sanity.*?feature"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "LOGEYE_RUN_EXTRA_TAGS",
+          "value": "sanity"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "GRADLE_PROPERTIES",
+          "value": ""
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "RUNTIME_OS",
+          "value": "windows"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "CUCUMBER_TESTS_BRANCH",
+          "value": "master"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "TEST_CASE_EXECUTIONS_NUMBER",
+          "value": "1"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "TEST_EXECUTORS_COUNT",
+          "value": "1"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "LOGEYE_RUN_NAME_PREFIX",
+          "value": ""
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "DATABASE_VENDOR",
+          "value": "MSSQL"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "AUTH_MODE",
+          "value": "BPS"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "BROWSER_TYPE",
+          "value": "chrome"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "WEB_ENGINE_APP_SERVER",
+          "value": "tomcat"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "OPENAM_APP_SERVER",
+          "value": "tomcat"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "CONNECTIVITY_APP_SERVER",
+          "value": "tomcat"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "JAVA_VENDOR",
+          "value": "zulujdk_11"
+        },
+        {
+          "_class": "hudson.model.StringParameterValue",
+          "name": "FAILRATE_THRESHOLD",
+          "value": "80%/50"
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "IMPORT_TESTRAIL",
+          "value": false
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "SKIP_TESTRUN_RESET",
+          "value": false
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "CREATE_AMI",
+          "value": false
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "DISABLE_TEARDOWN_VM",
+          "value": false
+        },
+        {
+          "_class": "hudson.model.BooleanParameterValue",
+          "name": "RERUN_FAILED_TESTS",
+          "value": false
+        }
+      ]
+    },
+    {
+      "_class": "jenkins.metrics.impl.TimeInQueueAction",
+      "blockedDurationMillis": 0,
+      "blockedTimeMillis": 0,
+      "buildableDurationMillis": 0,
+      "buildableTimeMillis": 0,
+      "buildingDurationMillis": 1475419,
+      "executingTimeMillis": 1475419,
+      "executorUtilization": 1.0,
+      "subTaskCount": 0,
+      "waitingDurationMillis": 5397,
+      "waitingTimeMillis": 5397
+    },
+    {
+      "_class": "jenkins.scm.api.SCMRevisionAction"
+    },
+    {
+      "_class": "org.jenkinsci.plugins.workflow.libs.LibrariesAction"
+    },
+    {},
+    {
+      "_class": "hudson.plugins.git.util.BuildData",
+      "buildsByBranchName": {
+        "master": {
+          "_class": "hudson.plugins.git.util.Build",
+          "buildNumber": 10146,
+          "buildResult": null,
+          "marked": {
+            "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+            "branch": [
+              {
+                "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+                "name": "master"
+              }
+            ]
+          },
+          "revision": {
+            "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+            "branch": [
+              {
+                "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+                "name": "master"
+              }
+            ]
+          }
+        }
+      },
+      "lastBuiltRevision": {
+        "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+        "branch": [
+          {
+            "SHA1": "a6e8c685b10e7a44615070abf0f8b6b8fd524263",
+            "name": "master"
+          }
+        ]
+      },
+      "remoteUrls": [
+        "https://code.experian.local/scm/dasa/platform-cicd-pipeline-library.git"
+      ],
+      "scmName": ""
+    },
+    {
+      "_class": "org.jenkinsci.plugins.workflow.cps.EnvActionImpl"
+    },
+    {
+      "_class": "hudson.plugins.git.util.BuildData",
+      "buildsByBranchName": {
+        "master": {
+          "_class": "hudson.plugins.git.util.Build",
+          "buildNumber": 10146,
+          "buildResult": null,
+          "marked": {
+            "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+            "branch": [
+              {
+                "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+                "name": "master"
+              }
+            ]
+          },
+          "revision": {
+            "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+            "branch": [
+              {
+                "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+                "name": "master"
+              }
+            ]
+          }
+        }
+      },
+      "lastBuiltRevision": {
+        "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+        "branch": [
+          {
+            "SHA1": "82742a961600e57b98daa0ad5c6306c7cec905de",
+            "name": "master"
+          }
+        ]
+      },
+      "remoteUrls": [
+        "https://code.experian.local/scm/dgaf/infrastructure-providers.git"
+      ],
+      "scmName": ""
+    },
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {},
+    {
+      "_class": "org.jenkinsci.plugins.displayurlapi.actions.RunDisplayAction"
+    },
+    {
+      "_class": "org.jenkinsci.plugins.pipeline.modeldefinition.actions.RestartDeclarativePipelineAction"
+    },
+    {},
+    {
+      "_class": "org.jenkinsci.plugins.workflow.job.views.FlowGraphAction"
+    },
+    {},
+    {},
+    {},
+    {}
+  ],
+  "artifacts": [
+    {
+      "displayPath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/command-stdout.log",
+      "fileName": "command-stdout.log",
+      "relativePath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/command-stdout.log"
+    },
+    {
+      "displayPath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml",
+      "fileName": "cucumber-logeye.xml",
+      "relativePath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml"
+    },
+    {
+      "displayPath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber.json",
+      "fileName": "cucumber.json",
+      "relativePath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber.json"
+    },
+    {
+      "displayPath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber.xml",
+      "fileName": "cucumber.xml",
+      "relativePath": "ansible.0pAXS9-10146-883eff08cc65484281631aeda66e147c/cucumber.xml"
+    },
+    {
+      "displayPath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/command-stdout.log",
+      "fileName": "command-stdout.log",
+      "relativePath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/command-stdout.log"
+    },
+    {
+      "displayPath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml",
+      "fileName": "cucumber-logeye.xml",
+      "relativePath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml"
+    },
+    {
+      "displayPath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber.json",
+      "fileName": "cucumber.json",
+      "relativePath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber.json"
+    },
+    {
+      "displayPath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber.xml",
+      "fileName": "cucumber.xml",
+      "relativePath": "ansible.HBKdEg-10146-883eff08cc65484281631aeda66e147c/cucumber.xml"
+    },
+    {
+      "displayPath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/command-stdout.log",
+      "fileName": "command-stdout.log",
+      "relativePath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/command-stdout.log"
+    },
+    {
+      "displayPath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml",
+      "fileName": "cucumber-logeye.xml",
+      "relativePath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber-logeye.xml"
+    },
+    {
+      "displayPath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber.json",
+      "fileName": "cucumber.json",
+      "relativePath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber.json"
+    },
+    {
+      "displayPath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber.xml",
+      "fileName": "cucumber.xml",
+      "relativePath": "ansible.qkXy_Y-10146-883eff08cc65484281631aeda66e147c/cucumber.xml"
+    },
+    {
+      "displayPath": "summary-log-location-10146-883eff08cc65484281631aeda66e147c.txt",
+      "fileName": "summary-log-location-10146-883eff08cc65484281631aeda66e147c.txt",
+      "relativePath": "summary-log-location-10146-883eff08cc65484281631aeda66e147c.txt"
+    }
+  ],
+  "building": false,
+  "description": "cmrf / windows / zulujdk_11",
+  "displayName": "#10146",
+  "duration": 1475419,
+  "estimatedDuration": 1353693,
+  "executor": null,
+  "fullDisplayName": "testpipeline-powercurve-runtime » master #10146",
+  "id": "10146",
+  "keepLog": false,
+  "number": 10146,
+  "queueId": 8771,
+  "result": "SUCCESS",
+  "timestamp": 1657087777051,
+  "url": "https://jenkins-hb-mono-dev.experianone.io/job/testpipeline-powercurve-runtime/job/master/10146/",
+  "changeSets": [],
+  "culprits": [],
+  "nextBuild": null,
+  "previousBuild": {
+    "number": 10145,
+    "url": "https://jenkins-hb-mono-dev.experianone.io/job/testpipeline-powercurve-runtime/job/master/10145/"
+  }
+}

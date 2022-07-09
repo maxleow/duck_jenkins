@@ -3,8 +3,8 @@ import os.path
 import re
 
 import pandas as pd
-import io
 import requests
+from aiohttp import ClientSession, BasicAuth
 
 from duckdb import DuckDBPyConnection
 
@@ -12,6 +12,8 @@ from duck_jenkins._model import Job, Build, Parameter, Artifact, Jenkins
 from duck_jenkins._utils import to_json, upstream_lookup, json_lookup
 import logging
 import time
+import asyncio
+import aiohttp
 
 
 class JenkinsData:
@@ -39,42 +41,46 @@ class JenkinsData:
 
     secret: str = None
 
-    def pull_artifact(self, json_file: str, overwrite: bool = False):
+    async def pull_artifact(self, json_file: str, overwrite: bool = False):
         artifacts = json_lookup(json_file, '$.artifacts')
         url = json_lookup(json_file, '$.url')
         build_number = json_lookup(json_file, '$.number')
         target = os.path.dirname(json_file) + f"/{build_number}_artifact.csv"
         dirs = {os.path.dirname(a['relativePath']) for a in artifacts}
 
-        def request():
-            dfs = []
-            for d in dirs:
-                full_url = url + f'/artifact/{d}'
-                logging.info(full_url)
-                get = requests.get(
-                    full_url,
-                    auth=self.__auth,
-                    verify=False)
-
-                if get.ok and get.content:
-                    html = pd.read_html(io.StringIO(get.content.decode('utf-8')))
-                    if html:
-                        df = html[0]
+        async def get_artifacts(session: ClientSession, artifact_url: str, dir_name: str) -> pd.DataFrame:
+            async with session.get(
+                    artifact_url, ssl=self.verify_ssl,
+                    auth=BasicAuth(self.__auth[0], self.__auth[1])) as resp:
+                html = await resp.text()
+                logging.info(artifact_url)
+                logging.info('downloaded content: %s', len(html))
+                try:
+                    dfs = pd.read_html(html)
+                    if dfs:
+                        df = dfs[0]
                         df = df.iloc[:-1, 1:-1].dropna()
-                        df['dir'] = d
+                        df['dir'] = dir_name
                         df = df.rename(columns={1: 'file_name', 2: 'timestamp', 3: 'size'})
-                        dfs.append(df)
-                else:
-                    continue
+                        return df
+                    return pd.DataFrame([])
+                except ValueError:
+                    return pd.DataFrame([])
 
-            if dfs:
-                logging.info('writing artifact: %s', target)
-                pd.concat(dfs).to_csv(target, index=False)
+        async def fetch(artifact_url):
+            async with aiohttp.ClientSession() as session:
+                tasks = []
+                for d in dirs:
+                    full_url = artifact_url + f'/artifact/{d}'
+                    tasks.append(asyncio.ensure_future(get_artifacts(session, full_url, d)))
 
+                dfs = await asyncio.gather(*tasks)
+                if dfs:
+                    pd.concat(dfs).to_csv(target, index=False)
         if overwrite:
-            request()
+            await fetch(url)
         elif not os.path.exists(target):
-            request()
+            await fetch(url)
         else:
             logging.info('skipping artifact: %s', build_number)
 
@@ -115,7 +121,7 @@ class JenkinsData:
 
         if ok:
             if artifact:
-                self.pull_artifact(json_file, overwrite=overwrite)
+                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             if recursive_upstream:
                 cause = upstream_lookup(json_file)
                 if cause:
@@ -166,22 +172,18 @@ class DuckLoader:
             jenkins = Jenkins.assign_cursor(cursor).factory(jenkins_domain_name)
             job = Job.assign_cursor(cursor).factory(job_name, jenkins.id)
             build = Build.assign_cursor(cursor).select(build_number=build_number, job_id=job.id)
-            logging.info(f"job_name: {job_name}, build_number: {build_number}, build: {build}")
+            logging.info(f"inserting [job_name: {job_name}, build_number: {build_number}]")
             if build:
-                logging.info(f'skipping inserted build: {build.id}')
-                return
+                logging.info(f'skipping existing build: {build.id}')
             if overwrite or not build:
-                logging.info(f'######## Build ########')
                 st = time.time()
                 b = Build.assign_cursor(cursor).insert(file_name, job)
                 logging.debug(f"Execution time: {time.time() - st}s")
 
-                logging.info('######## Parameters ########')
                 st = time.time()
                 Parameter.assign_cursor(cursor).insert(file_name, b.id)
                 logging.debug(f"Execution time: {time.time() - st}s")
 
-                logging.info('######## Artifacts ########')
                 st = time.time()
                 Artifact.assign_cursor(cursor).insert(build=b, data_dir=data_dir)
                 logging.debug(f"Execution time: {time.time() - st}s")

@@ -63,7 +63,7 @@ class Base(BaseModel):
     @classmethod
     def select(cls, **kwargs):
         sql = cls.select_query(**kwargs)
-        logging.debug("SQL> ", sql)
+        logging.debug("SQL> %s", sql)
         try:
             result = cls.__cursor__.query(sql).to_df().to_dict('records')
         except RuntimeError:
@@ -149,7 +149,8 @@ class Result(Base):
           (1, 'SUCCESS'),
           (2, 'FAILURE'),
           (3, 'ABORTED'),
-          (4, 'UNSTABLE')
+          (4, 'UNSTABLE'),
+          (5, 'NONE')
         """
 
 
@@ -301,25 +302,20 @@ class Build(Base):
     @classmethod
     def insert(cls, json_file: str, job: Job):
         build_number = json_lookup(json_file, '$.number')
-        logging.debug('build number:', build_number)
-
         result = json_lookup(json_file, '$.result')
+        result = result if result else 'NONE'
         result_obj = Result.assign_cursor(cls.__cursor__).select(name=result)
-        logging.debug('result: ', result_obj)
 
         duration = json_lookup(json_file, '$.duration')
-        logging.debug('duration: ', duration)
-
         timestamp = json_lookup(json_file, '$.timestamp')
-        logging.debug('timestamp: ', timestamp)
-
         previous_build_number = json_lookup(json_file, '$.previousBuild.number')
         previous_build_number = previous_build_number if previous_build_number else 0
-        logging.debug('previous build: ', previous_build_number)
 
         causes_extracted = Cause.assign_cursor(cls.__cursor__).extract(json_file, job.jenkins_id)
-        logging.debug('causes extracted: ', causes_extracted)
 
+        logging.info("+ Build [build_number: %s, result: (%s), duration: %s, timestamp: %s, previous_build: %s]",
+            build_number, result_obj, duration, timestamp, previous_build_number)
+        logging.info("+ Cause [%s]", causes_extracted)
         return cls.factory(
             job=job,
             build_number=build_number,
@@ -417,8 +413,8 @@ class Artifact(Base):
     @classmethod
     def get_schema(cls):
         return f"""
-        CREATE SEQUENCE seq_{cls.__table_name__};
-        CREATE TABLE {cls.__table_name__}(
+        CREATE SEQUENCE IF NOT EXISTS seq_{cls.__table_name__};
+        CREATE TABLE IF NOT EXISTS {cls.__table_name__}(
             id         UBIGINT DEFAULT NEXTVAL('seq_{cls.__table_name__}'),
             build_id   UBIGINT,
             file_name  VARCHAR,
@@ -430,24 +426,24 @@ class Artifact(Base):
         """
 
     @staticmethod
-    def size_in_byte(size: str)-> int:
+    def size_in_byte(size: str) -> int:
         x = str(size).split(' ')
         if len(x) < 2:
-            return size
+            return int(size)
 
         unit = x[1].upper()
         if unit == 'B':
             return int(x[0])
         if unit == 'KB':
-            return float(x[0]) * 1024
+            return int(float(x[0]) * 1024)
         if unit == 'MB':
-            return float(x[0]) * 1024 ** 2
+            return int(float(x[0]) * 1024 ** 2)
         if unit == 'GB':
-            return float(x[0]) * 1024 ** 3
+            return int(float(x[0]) * 1024 ** 3)
         if unit == 'TB':
-            return float(x[0]) * 1024 ** 4
+            return int(float(x[0]) * 1024 ** 4)
 
-        return int(x)
+        raise ValueError("Not supported unit or value: " + size)
 
     @classmethod
     def insert(cls, build: Build, data_dir: str):
@@ -463,6 +459,7 @@ class Artifact(Base):
             return
 
         df = pd.read_csv(_dir)
+        df['build_id'] = build.id
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%b %d, %Y %I:%M:%S %p').astype(str)
         df['size'] = df['size'].apply(lambda x: cls.size_in_byte(x))
         df = df.fillna('')

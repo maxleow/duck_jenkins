@@ -12,6 +12,7 @@ setuptools.setup(
         "requests",
         "jsonpath-ng",
         "pydantic",
+        "aiohttp"
     ],
     author="Max Leow",
     author_email="maxengiu@outlook.com",

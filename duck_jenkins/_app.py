@@ -173,8 +173,9 @@ class DuckLoader:
             job = Job.assign_cursor(cursor).factory(job_name, jenkins.id)
             build = Build.assign_cursor(cursor).select(build_number=build_number, job_id=job.id)
             logging.info(f"inserting [job_name: {job_name}, build_number: {build_number}]")
-            if build:
+            if not overwrite and build:
                 logging.info(f'skipping existing build: {build.id}')
+                continue
             if overwrite or not build:
                 st = time.time()
                 b = Build.assign_cursor(cursor).insert(file_name, job)

@@ -116,26 +116,27 @@ class JenkinsData:
         elif not os.path.exists(json_file):
             ok = request()
         else:
+            ok = False
             logging.info('found at: %s', json_file)
             if not continue_when_exist:
                 logging.info('skipping request: %s %s', project_name, build_number)
                 return
 
-        if ok:
-            if artifact:
-                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
-            if recursive_upstream:
-                cause = upstream_lookup(json_file)
-                if cause:
-                    self.pull(
-                        project_name=cause['upstreamProject'],
-                        build_number=cause['upstreamBuild'],
-                        recursive_upstream=recursive_upstream,
-                        artifact=artifact,
-                        overwrite=overwrite,
-                        recursive_previous=0,
-                        recursive_previous_trial=recursive_previous_trial
-                    )
+
+        if artifact:
+            asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+        if recursive_upstream:
+            cause = upstream_lookup(json_file)
+            if cause:
+                self.pull(
+                    project_name=cause['upstreamProject'],
+                    build_number=cause['upstreamBuild'],
+                    recursive_upstream=recursive_upstream,
+                    artifact=artifact,
+                    overwrite=overwrite,
+                    recursive_previous=0,
+                    recursive_previous_trial=recursive_previous_trial
+                )
         if recursive_previous:
             previous_build = build_number - 1
             _trial = self.skip_trial if ok else recursive_previous_trial

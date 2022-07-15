@@ -93,6 +93,7 @@ class JenkinsData:
             recursive_previous_trial: int = 5,
             artifact: bool = False,
             overwrite: bool = False,
+            continue_when_exist = False
     ):
         json_file = self.data_directory + f'/{project_name}/{build_number}_info.json'
         logging.info('Overwrite: %s', overwrite)
@@ -115,9 +116,10 @@ class JenkinsData:
         elif not os.path.exists(json_file):
             ok = request()
         else:
-            logging.info('skipping request: %s %s', project_name, build_number)
             logging.info('found at: %s', json_file)
-            return
+            if not continue_when_exist:
+                logging.info('skipping request: %s %s', project_name, build_number)
+                return
 
         if ok:
             if artifact:

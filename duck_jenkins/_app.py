@@ -47,7 +47,7 @@ class JenkinsData:
             return
 
         artifacts = json_lookup(json_file, '$.artifacts')
-        logging.info('Artifacts: %s', artifacts)
+        logging.info('Artifacts size: %s', len(artifacts))
         url = json_lookup(json_file, '$.url')
         build_number = json_lookup(json_file, '$.number')
         target = os.path.dirname(json_file) + f"/{build_number}_artifact.csv"
@@ -87,7 +87,7 @@ class JenkinsData:
         elif not os.path.exists(target):
             await fetch(url)
         else:
-            logging.info('skipping artifact: %s', build_number)
+            logging.info('skipping existing artifact for build: %s', build_number)
 
     @staticmethod
     def request_and_save(
@@ -138,6 +138,7 @@ class JenkinsData:
             json_file = get_json_file(self.data_directory, project_name, previous_build)
             logging.info('Process previous build: %s %s', project_name, previous_build)
             if os.path.exists(json_file) and not overwrite:
+                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
                 previous_build -= 1
                 trial -= 1
                 logging.info('Build exist with remaining trial: %s', trial)

@@ -97,6 +97,7 @@ class JenkinsData:
     ):
         json_file = self.data_directory + f'/{project_name}/{build_number}_info.json'
         logging.info('Overwrite: %s', overwrite)
+        logging.info('Json file exist: %s, %s, %s', os.path.exists(json_file), project_name, build_number)
 
         if not os.path.exists(json_file) or overwrite:
             get = request(
@@ -117,7 +118,8 @@ class JenkinsData:
                 asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             if recursive_upstream:
                 cause = upstream_lookup(json_file)
-                if cause:
+                if cause['upstreamProject'] and cause['upstreamBuild']:
+                    logging.info("Pulling upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
                     self.pull(
                         project_name=cause['upstreamProject'],
                         build_number=cause['upstreamBuild'],

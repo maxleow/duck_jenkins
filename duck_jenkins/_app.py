@@ -130,8 +130,6 @@ class JenkinsData:
                         recursive_previous_trial=recursive_previous_trial,
                         continue_when_exist=True
                     )
-                else:
-                    return
         if recursive_previous:
             previous_build = build_number - 1
             _trial = self.skip_trial if os.path.exists(json_file) else recursive_previous_trial

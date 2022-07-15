@@ -22,6 +22,8 @@ def to_json(filename, data):
     with open(filename, 'w') as fp:
         json.dump(data, fp)
 
+def get_json_file(data_directory: str, project_name: str, build_number: int):
+    return data_directory + f'/{project_name}/{build_number}_info.json'
 
 def upstream_lookup(json_file: str):
     jpath='$.actions[?(@._class=="hudson.model.CauseAction")].causes'

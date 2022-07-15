@@ -9,7 +9,7 @@ from aiohttp import ClientSession, BasicAuth
 from duckdb import DuckDBPyConnection
 
 from duck_jenkins._model import Job, Build, Parameter, Artifact, Jenkins
-from duck_jenkins._utils import to_json, upstream_lookup, json_lookup, request
+from duck_jenkins._utils import to_json, upstream_lookup, json_lookup, request, get_json_file
 import logging
 import time
 import asyncio
@@ -42,7 +42,12 @@ class JenkinsData:
     secret: str = None
 
     async def pull_artifact(self, json_file: str, overwrite: bool = False):
+        if not os.path.exists(json_file):
+            logging.info('skipping artifact reason not exist: %s', json_file)
+            return
+
         artifacts = json_lookup(json_file, '$.artifacts')
+        logging.info('Artifacts: %s', artifacts)
         url = json_lookup(json_file, '$.url')
         build_number = json_lookup(json_file, '$.number')
         target = os.path.dirname(json_file) + f"/{build_number}_artifact.csv"
@@ -84,67 +89,107 @@ class JenkinsData:
         else:
             logging.info('skipping artifact: %s', build_number)
 
+    @staticmethod
+    def request_and_save(
+            domain_name: str,
+            project_name: str,
+            build_number: int,
+            auth: tuple,
+            verify_ssl: bool,
+            json_file: str
+    ):
+        get = request(
+            domain_name=domain_name,
+            project_name=project_name,
+            build_number=build_number,
+            auth=auth,
+            verify_ssl=verify_ssl
+        )
+        if get.ok:
+            to_json(json_file, get.json())
+        return get.ok
+
+    def pull_upstream(self, project_name: str, build_number: int, overwrite: bool):
+        json_file = get_json_file(self.data_directory, project_name, build_number)
+        if not os.path.exists(json_file) or overwrite:
+            JenkinsData.request_and_save(
+                domain_name=self.domain_name,
+                project_name=project_name,
+                build_number=build_number,
+                auth=self.__auth,
+                verify_ssl=self.verify_ssl,
+                json_file=json_file
+            )
+        cause = upstream_lookup(json_file)
+        if cause and cause['upstreamProject'] and cause['upstreamBuild']:
+            logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
+            self.pull_upstream(
+                project_name=cause['upstreamProject'],
+                build_number=cause['upstreamBuild'],
+                overwrite=overwrite,
+            )
+        else:
+            logging.info("Skip upstream build: %s %s", project_name, build_number)
+
+    def pull_previous(self, project_name: str, build_number: int, overwrite: bool):
+        previous_build = build_number -1
+        trial = 5
+        while True:
+            json_file = get_json_file(self.data_directory, project_name, previous_build)
+            logging.info('Process previous build: %s %s', project_name, previous_build)
+            if os.path.exists(json_file) and not overwrite:
+                previous_build -= 1
+                trial -= 1
+                logging.info('Build exist with remaining trial: %s', trial)
+                if trial == 0:
+                    break
+                continue
+
+            JenkinsData.request_and_save(
+                domain_name=self.domain_name,
+                project_name=project_name,
+                build_number=previous_build,
+                auth=self.__auth,
+                verify_ssl=self.verify_ssl,
+                json_file=json_file
+            )
+            previous_build -= 1
+
     def pull(
             self,
             project_name: str,
             build_number: int,
             recursive_upstream: bool = False,
-            recursive_previous: int = 0,
-            recursive_previous_trial: int = 5,
+            recursive_previous: bool = False,
             artifact: bool = False,
             overwrite: bool = False,
-            continue_when_exist = False
     ):
-        json_file = self.data_directory + f'/{project_name}/{build_number}_info.json'
+        json_file = get_json_file(self.data_directory, project_name, build_number)
         logging.info('Overwrite: %s', overwrite)
         logging.info('Json file exist: %s, %s, %s', os.path.exists(json_file), project_name, build_number)
 
         if not os.path.exists(json_file) or overwrite:
-            get = request(
+            JenkinsData.request_and_save(
                 domain_name=self.domain_name,
                 project_name=project_name,
                 build_number=build_number,
                 auth=self.__auth,
-                verify_ssl=self.verify_ssl
+                verify_ssl=self.verify_ssl,
+                json_file=json_file
             )
-            if get.ok:
-                to_json(json_file, get.json())
-        elif not continue_when_exist:
+        elif not self.skip_trial:
             logging.info('skipping build: %s %s', project_name, build_number)
             return
+        else:
+            self.skip_trial -= 1
 
-        if os.path.exists(json_file):
-            if artifact:
-                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
-            if recursive_upstream:
-                cause = upstream_lookup(json_file)
-                if cause and cause['upstreamProject'] and cause['upstreamBuild']:
-                    logging.info("Pulling upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
-                    self.pull(
-                        project_name=cause['upstreamProject'],
-                        build_number=cause['upstreamBuild'],
-                        recursive_upstream=recursive_upstream,
-                        artifact=artifact,
-                        overwrite=overwrite,
-                        recursive_previous=0,
-                        recursive_previous_trial=recursive_previous_trial,
-                        continue_when_exist=True
-                    )
+        if artifact:
+            asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+        if recursive_upstream:
+            self.pull_upstream(project_name=project_name, build_number=build_number, overwrite=overwrite)
         if recursive_previous:
-            previous_build = build_number - 1
-            _trial = self.skip_trial if os.path.exists(json_file) else recursive_previous_trial
-            logging.info('remaining trial: %s', _trial)
-            if _trial > 0:
-                self.pull(
-                    project_name=project_name,
-                    build_number=previous_build,
-                    recursive_upstream=recursive_upstream,
-                    recursive_previous=recursive_previous - 1,
-                    recursive_previous_trial=_trial - 1,
-                    artifact=artifact,
-                    overwrite=overwrite,
-                    continue_when_exist=True
-                )
+            self.pull_previous(project_name=project_name, build_number=build_number, overwrite=overwrite)
+
 
 
 class DuckLoader:

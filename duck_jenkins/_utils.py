@@ -1,6 +1,8 @@
 import json
 from jsonpath_ng.ext import parser
 import os
+import logging
+import requests
 
 
 def json_lookup(file, jpath):
@@ -29,3 +31,12 @@ def upstream_lookup(json_file: str):
         if upstream_build:
             return c
     return None
+
+def request(domain_name: str, project_name: str, build_number: int, auth: tuple, verify_ssl: bool=True):
+    logging.info(f"Pulling: {project_name} {build_number}")
+    url = "https://{}/job/{}/{}/api/json".format(
+        domain_name,
+        project_name.replace('/', '/job/'),
+        build_number
+    )
+    return requests.get(url, auth=auth, verify=verify_ssl)

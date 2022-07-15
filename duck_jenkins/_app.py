@@ -9,7 +9,7 @@ from aiohttp import ClientSession, BasicAuth
 from duckdb import DuckDBPyConnection
 
 from duck_jenkins._model import Job, Build, Parameter, Artifact, Jenkins
-from duck_jenkins._utils import to_json, upstream_lookup, json_lookup
+from duck_jenkins._utils import to_json, upstream_lookup, json_lookup, request
 import logging
 import time
 import asyncio
@@ -98,30 +98,19 @@ class JenkinsData:
         json_file = self.data_directory + f'/{project_name}/{build_number}_info.json'
         logging.info('Overwrite: %s', overwrite)
 
-        def request():
-            logging.info(f"Pulling: {project_name} {build_number}")
-            url = "https://{}/job/{}/{}/api/json".format(
-                self.domain_name,
-                project_name.replace('/', '/job/'),
-                build_number
+        if not os.path.exists(json_file) or overwrite:
+            get = request(
+                domain_name=self.domain_name,
+                project_name=project_name,
+                build_number=build_number,
+                auth=self.__auth,
+                verify_ssl=self.verify_ssl
             )
-            get = requests.get(url, auth=self.__auth, verify=self.verify_ssl)
             if get.ok:
-                logging.info('writing to: %s', json_file)
                 to_json(json_file, get.json())
-            return get.ok
-
-        if overwrite:
-            ok = request()
-        elif not os.path.exists(json_file):
-            ok = request()
-        else:
-            ok = False
-            logging.info('found at: %s', json_file)
-            if not continue_when_exist:
-                logging.info('skipping request: %s %s', project_name, build_number)
-                return
-
+        elif not continue_when_exist:
+            logging.info('skipping build: %s %s', project_name, build_number)
+            return
 
         if artifact:
             asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
@@ -135,11 +124,12 @@ class JenkinsData:
                     artifact=artifact,
                     overwrite=overwrite,
                     recursive_previous=0,
-                    recursive_previous_trial=recursive_previous_trial
+                    recursive_previous_trial=recursive_previous_trial,
+                    continue_when_exist=True
                 )
         if recursive_previous:
             previous_build = build_number - 1
-            _trial = self.skip_trial if ok else recursive_previous_trial
+            _trial = self.skip_trial if os.path.exists(json_file) else recursive_previous_trial
             logging.info('remaining trial: %s', _trial)
             if _trial > 0:
                 self.pull(
@@ -149,7 +139,8 @@ class JenkinsData:
                     recursive_previous=recursive_previous - 1,
                     recursive_previous_trial=_trial - 1,
                     artifact=artifact,
-                    overwrite=overwrite
+                    overwrite=overwrite,
+                    continue_when_exist=True
                 )
 
 

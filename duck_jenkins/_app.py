@@ -118,7 +118,7 @@ class JenkinsData:
                 asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             if recursive_upstream:
                 cause = upstream_lookup(json_file)
-                if cause['upstreamProject'] and cause['upstreamBuild']:
+                if cause and cause['upstreamProject'] and cause['upstreamBuild']:
                     logging.info("Pulling upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
                     self.pull(
                         project_name=cause['upstreamProject'],
@@ -130,6 +130,8 @@ class JenkinsData:
                         recursive_previous_trial=recursive_previous_trial,
                         continue_when_exist=True
                     )
+                else:
+                    return
         if recursive_previous:
             previous_build = build_number - 1
             _trial = self.skip_trial if os.path.exists(json_file) else recursive_previous_trial

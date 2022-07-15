@@ -138,7 +138,6 @@ class JenkinsData:
             json_file = get_json_file(self.data_directory, project_name, previous_build)
             logging.info('Process previous build: %s %s', project_name, previous_build)
             if os.path.exists(json_file) and not overwrite:
-                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
                 previous_build -= 1
                 trial -= 1
                 logging.info('Build exist with remaining trial: %s', trial)
@@ -154,6 +153,7 @@ class JenkinsData:
                 verify_ssl=self.verify_ssl,
                 json_file=json_file
             )
+            asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             previous_build -= 1
 
     def pull(

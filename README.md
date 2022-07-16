@@ -3,7 +3,6 @@
 [![PyPI][pypi-latest-release-badge]][pypi]
 [![Downloads][pepy-downloads-badge]][pepy-downloads-link]
 [![PyPI - Python Version][pypi-python-versions-badge]][pypi]
-[![PyPI - Implementation][pypi-implementations-badge]][pypi]
 [![License][license-badge]][license-link]
 
 ## What is it?
@@ -30,7 +29,6 @@ pip install duck-jeknins
 [license-link]: https://github.com/maxleow/duck_jenkins/blob/main/LICENSE
 [pypi]: https://pypi.org/project/duck-jenkins/
 [pypi-latest-release-badge]: https://img.shields.io/pypi/v/duck-jenkins?color=blue&label=pypi&logo=version
-[pypi-implementations-badge]: https://img.shields.io/pypi/implementation/duck-jenkins-model
 [pypi-python-versions-badge]: https://img.shields.io/pypi/pyversions/duck-jenkins.svg
 [pepy-downloads-badge]: https://static.pepy.tech/personalized-badge/duck-jenkins?period=total&units=international_system&left_color=gray&right_color=blue&left_text=Downloads
 [pepy-downloads-link]: https://pepy.tech/project/duck-jenkins

@@ -107,12 +107,15 @@ class JenkinsData:
         )
         if get.ok:
             to_json(json_file, get.json())
+
+        logging.info("request status: %s", get.ok)
         return get.ok
 
     def pull_upstream(self, project_name: str, build_number: int, overwrite: bool):
         json_file = get_json_file(self.data_directory, project_name, build_number)
+        ok = False
         if not os.path.exists(json_file) or overwrite:
-            JenkinsData.request_and_save(
+            ok = JenkinsData.request_and_save(
                 domain_name=self.domain_name,
                 project_name=project_name,
                 build_number=build_number,
@@ -120,20 +123,22 @@ class JenkinsData:
                 verify_ssl=self.verify_ssl,
                 json_file=json_file
             )
-        cause = upstream_lookup(json_file)
-        if cause and cause['upstreamProject'] and cause['upstreamBuild']:
-            logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
-            self.pull_upstream(
-                project_name=cause['upstreamProject'],
-                build_number=cause['upstreamBuild'],
-                overwrite=overwrite,
-            )
-        else:
-            logging.info("Skip upstream build: %s %s", project_name, build_number)
+        if ok:
+            cause = upstream_lookup(json_file)
+            if cause and cause['upstreamProject'] and cause['upstreamBuild']:
+                logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
+                self.pull_upstream(
+                    project_name=cause['upstreamProject'],
+                    build_number=cause['upstreamBuild'],
+                    overwrite=overwrite,
+                )
+            else:
+                logging.info("Skip upstream build: %s %s", project_name, build_number)
 
     def pull_previous(self, project_name: str, build_number: int, overwrite: bool):
         previous_build = build_number -1
         trial = 5
+
         while True:
             json_file = get_json_file(self.data_directory, project_name, previous_build)
             logging.info('Process previous build: %s %s', project_name, previous_build)
@@ -145,7 +150,7 @@ class JenkinsData:
                     break
                 continue
 
-            JenkinsData.request_and_save(
+            ok = JenkinsData.request_and_save(
                 domain_name=self.domain_name,
                 project_name=project_name,
                 build_number=previous_build,
@@ -153,7 +158,13 @@ class JenkinsData:
                 verify_ssl=self.verify_ssl,
                 json_file=json_file
             )
-            asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+            if ok:
+                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+            else:
+                trial -= 1
+                logging.info('Build exist with remaining trial: %s', trial)
+                if trial == 0:
+                    break
             previous_build -= 1
 
     def pull(

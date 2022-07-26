@@ -1,8 +1,15 @@
 import glob
 
+import pytest
 import responses
 import json
 import os
+
+import logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logging.info("test")
 
 
 URL = "https://{}/job/{}/{}/api/json"
@@ -10,14 +17,14 @@ FEATURE_BRANCH_PROJECT = 'pipeline2/master'
 PROJECT_NAME = FEATURE_BRANCH_PROJECT.replace('/', '/job/')
 
 def get_build_info(file_name: str):
-    file_name = os.path.abspath('.') + f'/tests/data/{file_name}'
+    file_name = f'./data/{file_name}'
     with open(file_name) as jf:
         return json.load(jf)
 
 
 @responses.activate
-def test_pull_with_recursive_upstream(jenkins_data):
-
+@pytest.mark.parametrize("overwrite", [False,True])
+def test_pull_with_recursive_upstream(jenkins_data, overwrite):
 
     responses.add(
         responses.GET,
@@ -35,9 +42,9 @@ def test_pull_with_recursive_upstream(jenkins_data):
         project_name=FEATURE_BRANCH_PROJECT,
         build_number=2,
         recursive_upstream=True,
-        recursive_previous=0,
+        recursive_previous=False,
         artifact=False,
-        overwrite=True
+        overwrite=overwrite
     )
     _dir = f"{jenkins_data.data_directory}/{FEATURE_BRANCH_PROJECT}"
     assert os.path.exists(f"{_dir}/1_info.json")

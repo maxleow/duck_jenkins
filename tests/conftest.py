@@ -4,7 +4,7 @@ import os
 import shutil
 
 BASE_HOST = 'example.jenkins.io'
-WORKING_DIR = os.path.abspath('.') + '/tests/temp'
+WORKING_DIR = './temp'
 
 
 @pytest.fixture(scope='session')
@@ -29,7 +29,7 @@ def run_around_tests():
     if os.path.exists(delete_dir):
         shutil.rmtree(delete_dir)
     os.makedirs(delete_dir)
-
+    yield
 
 @pytest.fixture
 def jenkins_data(auth_data):

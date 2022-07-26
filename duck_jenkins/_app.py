@@ -82,6 +82,7 @@ class JenkinsData:
                 dfs = await asyncio.gather(*tasks)
                 if dfs:
                     pd.concat(dfs).to_csv(target, index=False)
+
         if overwrite:
             await fetch(url)
         elif not os.path.exists(target):
@@ -113,9 +114,10 @@ class JenkinsData:
 
     def pull_upstream(self, project_name: str, build_number: int, overwrite: bool):
         json_file = get_json_file(self.data_directory, project_name, build_number)
-        ok = False
-        if not os.path.exists(json_file) or overwrite:
-            ok = JenkinsData.request_and_save(
+        logging.info("Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
+        file_exist = os.path.exists(json_file)
+        if not file_exist or overwrite:
+            JenkinsData.request_and_save(
                 domain_name=self.domain_name,
                 project_name=project_name,
                 build_number=build_number,
@@ -123,7 +125,8 @@ class JenkinsData:
                 verify_ssl=self.verify_ssl,
                 json_file=json_file
             )
-        if ok:
+            file_exist = os.path.exists(json_file)
+        if file_exist:
             cause = upstream_lookup(json_file)
             if cause and cause['upstreamProject'] and cause['upstreamBuild']:
                 logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
@@ -136,7 +139,7 @@ class JenkinsData:
                 logging.info("Skip upstream build: %s %s", project_name, build_number)
 
     def pull_previous(self, project_name: str, build_number: int, overwrite: bool):
-        previous_build = build_number -1
+        previous_build = build_number - 1
         trial = 5
 
         while True:
@@ -201,7 +204,6 @@ class JenkinsData:
             self.pull_upstream(project_name=project_name, build_number=build_number, overwrite=overwrite)
         if recursive_previous:
             self.pull_previous(project_name=project_name, build_number=build_number, overwrite=overwrite)
-
 
 
 class DuckLoader:

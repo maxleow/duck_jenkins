@@ -4,3 +4,4 @@ dist
 __main__.py
 .pytest_cache
 debug.log
+tests/temp

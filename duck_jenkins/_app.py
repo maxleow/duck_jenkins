@@ -141,7 +141,7 @@ class JenkinsData:
             else:
                 logging.info("Skip upstream build: %s %s", project_name, build_number)
 
-    def pull_previous(self, project_name: str, build_number: int, overwrite: bool, artifact: bool):
+    def pull_previous(self, project_name: str, build_number: int, overwrite: bool, artifact: bool, upstream: bool):
         previous_build = build_number - 1
         trial = 5
 
@@ -167,6 +167,13 @@ class JenkinsData:
             if ok:
                 if artifact:
                     asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+                if upstream:
+                    self.pull_upstream(
+                        project_name=project_name,
+                        build_number=build_number,
+                        overwrite=overwrite,
+                        artifact=artifact
+                    )
             else:
                 trial -= 1
                 logging.info('Build exist with remaining trial: %s', trial)
@@ -205,9 +212,20 @@ class JenkinsData:
         if artifact:
             asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
         if recursive_upstream:
-            self.pull_upstream(project_name=project_name, build_number=build_number, overwrite=overwrite, artifact=artifact)
+            self.pull_upstream(
+                project_name=project_name,
+                build_number=build_number,
+                overwrite=overwrite,
+                artifact=artifact
+            )
         if recursive_previous:
-            self.pull_previous(project_name=project_name, build_number=build_number, overwrite=overwrite, artifact=artifact)
+            self.pull_previous(
+                project_name=project_name,
+                build_number=build_number,
+                overwrite=overwrite,
+                artifact=artifact,
+                upstream=recursive_upstream
+            )
 
 
 class DuckLoader:

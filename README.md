@@ -12,7 +12,7 @@ If you want to query build data from your jenkins server, this library probably 
 ## Installation
 
 ```shell
-pip install duck-jeknins
+pip install duck-jenkins
 ```
 
 ## Main features

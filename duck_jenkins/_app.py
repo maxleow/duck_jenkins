@@ -3,7 +3,6 @@ import os.path
 import re
 
 import pandas as pd
-import requests
 from aiohttp import ClientSession, BasicAuth
 
 from duckdb import DuckDBPyConnection
@@ -112,7 +111,7 @@ class JenkinsData:
         logging.info("request status: %s", get.ok)
         return get.ok
 
-    def pull_upstream(self, project_name: str, build_number: int, overwrite: bool):
+    def pull_upstream(self, project_name: str, build_number: int, overwrite: bool, artifact: bool):
         json_file = get_json_file(self.data_directory, project_name, build_number)
         logging.info("Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
         file_exist = os.path.exists(json_file)
@@ -128,17 +127,21 @@ class JenkinsData:
             file_exist = os.path.exists(json_file)
         if file_exist:
             cause = upstream_lookup(json_file)
+
+            if artifact:
+                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             if cause and cause['upstreamProject'] and cause['upstreamBuild']:
                 logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
                 self.pull_upstream(
                     project_name=cause['upstreamProject'],
                     build_number=cause['upstreamBuild'],
                     overwrite=overwrite,
+                    artifact=artifact
                 )
             else:
                 logging.info("Skip upstream build: %s %s", project_name, build_number)
 
-    def pull_previous(self, project_name: str, build_number: int, overwrite: bool):
+    def pull_previous(self, project_name: str, build_number: int, overwrite: bool, artifact: bool):
         previous_build = build_number - 1
         trial = 5
 
@@ -162,7 +165,8 @@ class JenkinsData:
                 json_file=json_file
             )
             if ok:
-                asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
+                if artifact:
+                    asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
             else:
                 trial -= 1
                 logging.info('Build exist with remaining trial: %s', trial)
@@ -201,9 +205,9 @@ class JenkinsData:
         if artifact:
             asyncio.run(self.pull_artifact(json_file, overwrite=overwrite))
         if recursive_upstream:
-            self.pull_upstream(project_name=project_name, build_number=build_number, overwrite=overwrite)
+            self.pull_upstream(project_name=project_name, build_number=build_number, overwrite=overwrite, artifact=artifact)
         if recursive_previous:
-            self.pull_previous(project_name=project_name, build_number=build_number, overwrite=overwrite)
+            self.pull_previous(project_name=project_name, build_number=build_number, overwrite=overwrite, artifact=artifact)
 
 
 class DuckLoader:

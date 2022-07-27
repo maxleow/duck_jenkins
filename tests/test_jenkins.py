@@ -134,7 +134,8 @@ def test_pull_previous_build(jenkins_data):
         build_number=4,
         overwrite=True,
         artifact=False,
-        trial=0
+        trial=0,
+        size=3
     )
     _dir = f"{jenkins_data.data_directory}/{jenkins_data.domain_name}/{FEATURE_BRANCH_PROJECT}"
     assert os.path.exists(f"{_dir}/3_info.json")

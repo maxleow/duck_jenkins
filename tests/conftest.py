@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from duck_jenkins import JenkinsData
 import os
@@ -35,3 +37,9 @@ def run_around_tests():
 def jenkins_data(auth_data):
     jd = JenkinsData(**auth_data)
     yield jd
+
+
+def get_build_info(file_name: str):
+    file_name = f'./data/{file_name}'
+    with open(file_name) as jf:
+        return json.load(jf)

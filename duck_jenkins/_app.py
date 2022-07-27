@@ -84,6 +84,9 @@ class JenkinsData:
                 overwrite=overwrite,
                 artifact=artifact
             )
+
+            if files[2] and not overwrite: # when file exist prior pull
+                break
             if not files[0]:
                 trial -= 1
                 logging.info('Build exist with remaining trial: %s', trial)
@@ -105,11 +108,10 @@ class JenkinsData:
             data_directory: str,
             overwrite: bool = False
     ) -> str:
-        data_directory = os.path.abspath(data_directory + '/' + domain_name)
         json_file = get_json_file(data_directory, domain_name, project_name, build_number)
 
         if not os.path.exists(json_file):
-            raise FileNotFoundError(f"file: [{json_file}] not found")
+            raise FileNotFoundError(json_file)
 
         artifacts = json_lookup(json_file, '$.artifacts')
         logging.info('Artifacts size: %s', len(artifacts))
@@ -166,7 +168,7 @@ class JenkinsData:
             data_directory: str,
             artifact: bool = False,
             overwrite: bool = False
-    ) -> Tuple[Any, Optional[Coroutine[Any, Any, str]]]:
+    ) -> Tuple[str, str, bool]:
         json_file = get_json_file(
             data_directory,
             domain_name,
@@ -174,7 +176,8 @@ class JenkinsData:
             build_number
         )
         artifact_file = None
-        if overwrite or not os.path.exists(json_file):
+        exist = os.path.exists(json_file)
+        if overwrite or not exist:
             get = request(
                 domain_name=domain_name,
                 project_name=project_name,
@@ -189,15 +192,15 @@ class JenkinsData:
                 json_file = None
 
         if artifact:
-            artifact_file = cls._pull_artifact(
+            artifact_file = asyncio.run(cls._pull_artifact(
                 domain_name=domain_name,
                 auth=auth,
                 verify_ssl=verify_ssl,
                 project_name=project_name,
                 build_number=build_number,
                 data_directory=data_directory
-            )
-        return json_file, artifact_file
+            ))
+        return json_file, artifact_file, exist
 
     def pull(
             self,

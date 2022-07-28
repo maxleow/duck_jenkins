@@ -147,7 +147,7 @@ jd.pull_previous(
 ```
 ---
 ### DuckDB transformation
-Without transform into a database, it is useless for analytical.
+Without transform into a database, it is useless. Following steps demostrate how to import into DuckDB.
 ```python
 from duck_jenkins import DuckLoader
 import duckdb

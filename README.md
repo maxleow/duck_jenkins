@@ -91,7 +91,6 @@ Extracting a multi-branch pipeline
 ```python
 from duck_jenkins import JenkinsData
 
-JenkinsData()
 jd = JenkinsData(
     domain_name='jenkins1.example.io',
     verify_ssl=False,

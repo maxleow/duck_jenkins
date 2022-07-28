@@ -1,7 +1,7 @@
 import glob
 import os.path
 import re
-from typing import Tuple, Optional, Any, Coroutine
+from typing import Tuple
 
 import pandas as pd
 from aiohttp import ClientSession, BasicAuth
@@ -17,6 +17,10 @@ import aiohttp
 
 
 class JenkinsData:
+    """
+    Given any Jenkins server has REST API plugin installed, this library can be used
+    to pull build information and artefact metadata into a json and csv file.
+    """
 
     def __init__(
             self,
@@ -26,6 +30,14 @@ class JenkinsData:
             user_id: str = None,
             secret: str = None,
     ):
+        """
+        Initialize the object
+        :param domain_name: used to identify and construct pulling url
+        :param data_directory: File system directory to store the downloaded data
+        :param verify_ssl: True to verify, False to skip
+        :param user_id: user id used to log in the jenkins server
+        :param secret: password or secret key for authentication
+        """
         self.data_directory = data_directory
         self.domain_name = domain_name
         self.verify_ssl = verify_ssl
@@ -41,6 +53,15 @@ class JenkinsData:
             artifact: bool = False,
             recursive: bool = False
     ):
+        """
+        Download upstream builds info and artefacts metadata from any given build as json file and csv file
+        :param project_name: Jenkins's Job name
+        :param build_number: build number from the job to start pulling upward
+        :param overwrite: True to re-download and replace the existing file
+        :param artifact: True to include artefact meta download
+        :param recursive: True to download all upstream builds, False to download one
+        :return:
+        """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
         logging.info("Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
 
@@ -73,6 +94,17 @@ class JenkinsData:
             trial=5,
             size=0,
     ):
+        """
+        Download previous build information and artefact metadata recursively until
+        the unavailable build trial has exhausted
+        :param project_name: Jenkins's Job name
+        :param build_number: build number from the job to start pulling backward
+        :param overwrite: True to re-download and replace the existing file
+        :param artifact: True to include artefact metadata download
+        :param trial: When a build is unavailable(404), we don't know it is skipped or deleted
+        :param size: Total previous build info to be downloaded
+        :return:
+        """
         previous_build = build_number - 1
         counter = 1
         while True:
@@ -85,7 +117,7 @@ class JenkinsData:
                 artifact=artifact
             )
 
-            if files[2] and not overwrite: # when file exist prior pull
+            if files[2] and not overwrite:  # when file exist prior pull
                 break
             if not files[0]:
                 trial -= 1
@@ -108,6 +140,19 @@ class JenkinsData:
             data_directory: str,
             overwrite: bool = False
     ) -> str:
+        """
+        Asynchronously scrap the Jenkins's artifact page for artefact file information
+        like size, file name, file directory.
+
+        :param domain_name: used to identify and construct pulling url
+        :param auth: login id and secret used to access the job
+        :param verify_ssl: True to verify, False to skip.
+        :param project_name: Jenkins's Job name
+        :param build_number: build number from the job to start pulling backward
+        :param data_directory: File system directory to store the downloaded data
+        :param overwrite: True to re-download and replace the existing file
+        :return: File name which successfully downloaded.
+        """
         json_file = get_json_file(data_directory, domain_name, project_name, build_number)
 
         if not os.path.exists(json_file):
@@ -169,6 +214,18 @@ class JenkinsData:
             artifact: bool = False,
             overwrite: bool = False
     ) -> Tuple[str, str, bool]:
+        """
+        Pulling build info and artefact metadata as a pair
+        :param domain_name: used to identify and construct pulling url
+        :param auth: login id and secret used to access the job
+        :param verify_ssl: True to verify, False to skip.
+        :param project_name: Jenkins's Job name
+        :param build_number: build number from the job to start pulling backward
+        :param data_directory: File system directory to store the downloaded data
+        :param artifact: True to include artefact metadata download
+        :param overwrite: True to re-download and replace the existing file
+        :return:
+        """
         json_file = get_json_file(
             data_directory,
             domain_name,
@@ -209,6 +266,14 @@ class JenkinsData:
             artifact: bool = False,
             overwrite: bool = False,
     ):
+        """
+        Download build information and artefacts metadata as json file and csv file
+        :param project_name: Jenkins's Job name
+        :param build_number: build number from the job
+        :param artifact: True to include artefact metadata download
+        :param overwrite: True to re-download and replace the existing file
+        :return:
+        """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
         logging.info('Overwrite: %s', overwrite)
         logging.info('Json file exist: %s, %s, %s', os.path.exists(json_file), project_name, build_number)
@@ -226,7 +291,17 @@ class JenkinsData:
 
 
 class DuckLoader:
+    """
+    This tool leverage the file structure created by JenkinsData, provide a convenient
+    way to transform or import all downloaded data into DuckDB.
+
+    """
     def __init__(self, cursor: DuckDBPyConnection, jenkins_data_directory: str = '.'):
+        """
+
+        :param cursor: DuckDB connection's cursor
+        :param jenkins_data_directory: directory where all the extracted jenkins' data located.
+        """
         self.cursor = cursor
         self.data_directory = jenkins_data_directory
 
@@ -238,6 +313,16 @@ class DuckLoader:
             cursor: DuckDBPyConnection,
             overwrite: bool = False
     ):
+        """
+        Transform or import build info and artefact metadata from json and csv file
+        into a DuckDB
+        :param job_dir: Job directory contains json files and csv files
+        :param jenkins_domain_name: identify which jenkins server to import
+        :param data_dir: JenkinsData extracted root directory which contains all jenkins' server domain names
+        :param cursor: DuckDB connection's cursor
+        :param overwrite: True to re-insert, False to skip when a record is existed
+        :return:
+        """
         regex = f"{jenkins_domain_name}/(.*)/(.*)_info.json"
         file_names = glob.glob(job_dir + "/*.json")
         file_names.sort()
@@ -266,6 +351,13 @@ class DuckLoader:
                 logging.info('---')
 
     def import_into_db(self, jenkins_domain_name: str, overwrite: bool = False):
+        """
+        Scan the data directory by separate feature branch and non feature branch file
+        structure, prepare the paths and perform DuckDB import
+        :param jenkins_domain_name: Jenkins server that targeted for import
+        :param overwrite: True to re-insert, False to skip when a record is existed
+        :return:
+        """
 
         job_paths = glob.glob(f"{self.data_directory}/{jenkins_domain_name}/*")
         logging.debug(job_paths)

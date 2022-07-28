@@ -33,6 +33,7 @@ class Base(BaseModel):
             def get_result():
                 result = cls.__cursor__.query(sql_select).to_df().to_dict('records')
                 return cls(**result[0]) if result else None
+
             try:
                 return get_result()
             except RuntimeError:
@@ -239,13 +240,13 @@ class Build(Base):
     build_number: int
     result_id: int
     user_id: int
-    trigger_type: int # it is a cause type
+    trigger_type: int  # it is a cause type
     duration: int
     timestamp: datetime
     parameter_id: int = 0
     upstream_job_id: int = 0
     upstream_build_number: int = 0
-    upstream_type: int = 0 # it is a cause type
+    upstream_type: int = 0  # it is a cause type
     previous_build_number: int = 0
 
     @classmethod
@@ -314,7 +315,7 @@ class Build(Base):
         causes_extracted = Cause.assign_cursor(cls.__cursor__).extract(json_file, job.jenkins_id)
 
         logging.info("+ Build [build_number: %s, result: (%s), duration: %s, timestamp: %s, previous_build: %s]",
-            build_number, result_obj, duration, timestamp, previous_build_number)
+                     build_number, result_obj, duration, timestamp, previous_build_number)
         logging.info("+ Cause [%s]", causes_extracted)
         return cls.factory(
             job=job,

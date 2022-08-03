@@ -41,11 +41,11 @@ erDiagram
     Jenkins ||--o{ Job: has
     Job ||--o{ Build: has
     Build ||--o{ Artifact: has
-    Build ||--o{ User: has
+    Build ||--o| User: has
     Build ||--o{ Cause: has
     Build ||--o{ Parameter: has
-    Build ||--o{ Result: has
-    Parameter ||--o{ ParameterDictionary: has
+    Build ||--|| Result: has
+    Parameter ||--|| ParameterDictionary: has
     Jenkins{
         int id PK
         str domain_name

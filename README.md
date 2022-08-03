@@ -74,12 +74,12 @@ erDiagram
         int build_number
         int result_id        FK
         int user_id          FK 
-        int trigger_type     FK "Cause table's FK"
+        int trigger_type     FK "Cause table's PK"
         int duration
         datetime timestamp
         int upstream_job_id FK
         int upstream_build_number
-        int upstream_type   FK "Cause table's FK"
+        int upstream_type   FK "Cause table's PK"
         int previous_build_number
     }
     ParameterDictionary{

@@ -47,54 +47,53 @@ erDiagram
     Build ||--o{ Result: has
     Parameter ||--o{ ParameterDictionary: has
     Jenkins{
-        int id
+        int id PK
         str domain_name
     }
     Job{
-        int id
+        int id  PK
         str name
-        int jenkins_id
+        int jenkins_id FK
     }
     Result{
-        int id
+        int id PK
         str name
     }
     User{
-        int id
+        int id PK
         str name
         str lan_id
     }
     Cause{
-        int id
+        int id PK
         str category
     }
     Build{
-        int id
-        int job_id
+        int id               PK
+        int job_id           FK
         int build_number
-        int result_id
-        int user_id
-        int trigger_type
+        int result_id        FK
+        int user_id          FK 
+        int trigger_type     FK "Cause table's FK"
         int duration
         datetime timestamp
-        int parameter_id
-        int upstream_job_id
+        int upstream_job_id FK
         int upstream_build_number
-        int upstream_type
+        int upstream_type   FK "Cause table's FK"
         int previous_build_number
     }
     ParameterDictionary{
-        int id
+        int id PK
         str name
     }
     Parameter{
-        int build_id
-        int name_id
+        int build_id FK
+        int name_id  FK
         str value
     }
     Artifact{
-        int id
-        int build_id
+        int id        PK
+        int build_id  FK
         str file_name
         str dir
         int size

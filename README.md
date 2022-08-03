@@ -35,6 +35,15 @@ pip install duck-jenkins
 ### DuckDB transformer
 Transform all serialized data above to relational database, [DuckDB](https://duckdb.org/).
 
+```plantuml
+Alice -> Bob: Authentication Request
+Bob --> Alice: Authentication Response
+   
+Alice -> Bob: Another authentication Request
+Alice <-- Bob: Another authentication Response
+```
+
+
 #### Database Schemas
 1. Jenkins
    1. id: int

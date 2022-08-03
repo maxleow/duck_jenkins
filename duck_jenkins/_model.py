@@ -1,4 +1,5 @@
 from duckdb import DuckDBPyConnection
+from pandas.errors import EmptyDataError
 from pydantic import BaseModel
 from datetime import datetime
 import pandas as pd
@@ -458,8 +459,12 @@ class Artifact(Base):
         if cls.select(build_id=build.id):
             logging.info(f"skipping inserted build: {build.id}")
             return
+        try:
+            df = pd.read_csv(_dir)
+        except EmptyDataError:
+            logging.info("Skipping empty content artifact: %s", _dir)
+            return
 
-        df = pd.read_csv(_dir)
         df['build_id'] = build.id
         df['timestamp'] = pd.to_datetime(df['timestamp'], format='%b %d, %Y %I:%M:%S %p').astype(str)
         df['size'] = df['size'].apply(lambda x: cls.size_in_byte(x))

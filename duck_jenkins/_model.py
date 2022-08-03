@@ -244,7 +244,6 @@ class Build(Base):
     trigger_type: int  # it is a cause type
     duration: int
     timestamp: datetime
-    parameter_id: int = 0
     upstream_job_id: int = 0
     upstream_build_number: int = 0
     upstream_type: int = 0  # it is a cause type

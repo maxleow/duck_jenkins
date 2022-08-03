@@ -35,61 +35,72 @@ pip install duck-jenkins
 ### DuckDB transformer
 Transform all serialized data above to relational database, [DuckDB](https://duckdb.org/).
 
+#### Database ER diagram
 ```mermaid
-sequenceDiagram
-Alice -> Bob: Authentication Request
-Bob --> Alice: Authentication Response
-Alice -> Bob:Another authentication Response
-Bob --> Alice: Another authentication Response
+erDiagram
+    Jenkins ||--o{ Job: has
+    Job ||--o{ Build: has
+    Build ||--o{ Artifact: has
+    Build ||--o{ User: has
+    Build ||--o{ Cause: has
+    Build ||--o{ Parameter: has
+    Build ||--o{ Result: has
+    Parameter ||--o{ ParameterDictionary: has
+    Jenkins{
+        int id
+        str domain_name
+    }
+    Job{
+        int id
+        str name
+        int jenkins_id
+    }
+    Result{
+        int id
+        str name
+    }
+    User{
+        int id
+        str name
+        str lan_id
+    }
+    Cause{
+        int id
+        str category
+    }
+    Build{
+        int id
+        int job_id
+        int build_number
+        int result_id
+        int user_id
+        int trigger_type
+        int duration
+        datetime timestamp
+        int parameter_id
+        int upstream_job_id
+        int upstream_build_number
+        int upstream_type
+        int previous_build_number
+    }
+    ParameterDictionary{
+        int id
+        str name
+    }
+    Parameter{
+        int build_id
+        int name_id
+        str value
+    }
+    Artifact{
+        int id
+        int build_id
+        str file_name
+        str dir
+        int size
+        datetime timestamp
+    }
 ```
-
-
-#### Database Schemas
-1. Jenkins
-   1. id: int
-   2. domain_name: str
-2. Job
-   1. id: int
-   2. name: str
-   3. jenkins_id: int
-3. Result
-   1. id: int
-   2. name: str
-4. User
-   1. id: int
-   2. name: str
-   3. lan_id: str
-5. Cause
-   1. id: int
-   2. category: str
-6. Build
-   1. id: int
-   2. job_id: int
-   3. build_number: int
-   4. result_id: int
-   5. user_id: int
-   6. trigger_type: int
-   7. duration: int
-   8. timestamp: datetime
-   9. parameter_id: int
-   10. upstream_job_id: int
-   11. upstream_build_number: int
-   12. upstream_type: int
-   13. previous_build_number: int
-7. ParameterDictionary
-   1. id: int
-   2. name: str
-8. Parameter
-   1. build_id: int
-   2. name_id: int
-   3. value: str
-9. Artifact
-   1. id: int
-   2. build_id: int
-   3. file_name: str
-   4. dir: str
-   5. size: int
-   6. timestamp: datetime
 
 ## Example
 ### Jenkins Build extractor

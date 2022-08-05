@@ -59,7 +59,7 @@ erDiagram
         int id PK
         str name
     }
-    User{
+    Jenkins_User{
         int id PK
         str name
         str lan_id

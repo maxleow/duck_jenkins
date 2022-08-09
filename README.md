@@ -41,7 +41,7 @@ erDiagram
     Jenkins ||--o{ Job: has
     Job ||--o{ Build: has
     Build ||--o{ Artifact: has
-    Build ||--o| User: has
+    Build ||--o| Jenkins_User: has
     Build ||--o{ Cause: has
     Build ||--o{ Parameter: has
     Build ||--|| Result: has

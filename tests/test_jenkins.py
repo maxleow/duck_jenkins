@@ -205,11 +205,11 @@ def test_pull_previous_build_with_upstream_recursive(jenkins_data, size, overwri
     init_responses(jenkins_data.domain_name)
     jenkins_data.pull_previous(
         project_name=FEATURE_BRANCH_PROJECT,
-        build_number=3,
+        build_number=4,
         artifact=False,
         overwrite=True,
         upstream=True,
         size=size
     )
     _dir = f"{jenkins_data.data_directory}/{jenkins_data.domain_name}/{FEATURE_BRANCH_PROJECT}"
-    assert len(glob.glob(f"{_dir}/*")) == 2
+    assert len(glob.glob(f"{_dir}/*")) == 3

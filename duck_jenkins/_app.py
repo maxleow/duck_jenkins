@@ -87,7 +87,7 @@ class JenkinsData:
                     break
                 json_file = files[0]
             else:
-                logging.info("No upstream build: %s %s", project_name, build_number)
+                logging.info("No upstream build in file: %s", json_file)
                 break
 
     def pull_previous(
@@ -114,6 +114,8 @@ class JenkinsData:
         """
         previous_build = build_number - 1
         counter = 1
+        previous_builds = []
+
         while True:
             if previous_build == 0:
                 break
@@ -124,25 +126,32 @@ class JenkinsData:
                 artifact=artifact
             )
 
-            if files[2] and not overwrite:  # when file exist prior pull
+            if files[2] and not overwrite:
+                logging.info('Build exist exiting: %s', previous_build)
                 break
-            if not files[0]:
+
+            if files[0]:
+                previous_builds.append(previous_build)
+            else:
                 trial -= 1
-                logging.info('Build exist with remaining trial: %s', trial)
+                logging.info('Build missing with remaining trial: %s, build: %s', trial, previous_build)
                 if trial == 0:
                     break
-            elif upstream:
-                self.pull_upstream(
-                    project_name=project_name,
-                    build_number=previous_build,
-                    overwrite=overwrite,
-                    artifact=artifact,
-                    recursive=True
-                )
+
             previous_build -= 1
             counter += 1
             if size < counter:
                 break
+
+        if upstream:
+            for b in previous_builds:
+                self.pull_upstream(
+                    project_name=project_name,
+                    build_number=b,
+                    overwrite=overwrite,
+                    artifact=artifact,
+                    recursive=True
+                )
 
     @classmethod
     async def _pull_artifact(
@@ -290,8 +299,8 @@ class JenkinsData:
         :return pulled json file, pulled artifact file, is build exist prior pull
         """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
-        logging.info('Overwrite: %s', overwrite)
-        logging.info('Json file exist: %s, %s, %s', os.path.exists(json_file), project_name, build_number)
+        logging.info('Json file exist: %s, %s, %s, Overwrite: %s',
+                     os.path.exists(json_file), project_name, build_number, overwrite)
 
         return JenkinsData._pull(
             domain_name=self.domain_name,

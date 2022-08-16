@@ -64,7 +64,7 @@ def upstream_lookup(json_file: str):
     """
     jpath = '$.actions[?(@._class=="hudson.model.CauseAction")].causes'
     causes = json_lookup(json_file, jpath)
-    logging.info(causes)
+    logging.debug(causes)
     if causes:
         return causes[-1]
     return None

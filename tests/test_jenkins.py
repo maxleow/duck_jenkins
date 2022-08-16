@@ -106,7 +106,7 @@ def test_pull_without_recursive_upstream(jenkins_data):
 
 @responses.activate
 @pytest.mark.parametrize("trial", [2, 3, 5])
-def test_pull_previous_build_trial(jenkins_data, trial):
+def test_pull_previous_build_trial_when_not_exist(jenkins_data, trial):
     for i in range(trial):
         responses.add(
             responses.GET,

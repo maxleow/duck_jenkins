@@ -199,7 +199,7 @@ def test_pull_previous_build_overwrite(jenkins_data):
 
 
 @responses.activate
-@pytest.mark.parametrize("size", [0, 2])
+@pytest.mark.parametrize("size", [0, 1, 2, 3])
 @pytest.mark.parametrize("overwrite", [False, True])
 def test_pull_previous_build_with_upstream_recursive(jenkins_data, size, overwrite):
     init_responses(jenkins_data.domain_name)

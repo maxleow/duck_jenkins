@@ -79,6 +79,11 @@ class JenkinsData:
                     artifact=artifact
                 )
                 if not recursive or not files[0]:
+                    logging.info(
+                        "Upstream recursive pull exit: [recursive=%s], [file_exist=%s]",
+                        recursive,
+                        files[0]
+                    )
                     break
                 json_file = files[0]
             else:
@@ -91,6 +96,7 @@ class JenkinsData:
             build_number: int,
             overwrite: bool,
             artifact: bool,
+            upstream: bool = False,
             trial=5,
             size=0,
     ):
@@ -101,6 +107,7 @@ class JenkinsData:
         :param build_number: build number from the job to start pulling backward
         :param overwrite: True to re-download and replace the existing file
         :param artifact: True to include artefact metadata download
+        :param upstream: True to include upstream build download
         :param trial: When a build is unavailable(404), we don't know it is skipped or deleted
         :param size: Total previous build info to be downloaded
         :return:
@@ -124,6 +131,14 @@ class JenkinsData:
                 logging.info('Build exist with remaining trial: %s', trial)
                 if trial == 0:
                     break
+            elif upstream:
+                self.pull_upstream(
+                    project_name=project_name,
+                    build_number=previous_build,
+                    overwrite=overwrite,
+                    artifact=artifact,
+                    recursive=True
+                )
             previous_build -= 1
             counter += 1
             if size < counter:
@@ -224,7 +239,7 @@ class JenkinsData:
         :param data_directory: File system directory to store the downloaded data
         :param artifact: True to include artefact metadata download
         :param overwrite: True to re-download and replace the existing file
-        :return:
+        :return pulled json file, pulled artifact file, is build exist prior pull
         """
         json_file = get_json_file(
             data_directory,
@@ -265,14 +280,14 @@ class JenkinsData:
             build_number: int,
             artifact: bool = False,
             overwrite: bool = False,
-    ):
+    ) -> Tuple[str, str, bool]:
         """
         Download build information and artefacts metadata as json file and csv file
         :param project_name: Jenkins's Job name
         :param build_number: build number from the job
         :param artifact: True to include artefact metadata download
         :param overwrite: True to re-download and replace the existing file
-        :return:
+        :return pulled json file, pulled artifact file, is build exist prior pull
         """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
         logging.info('Overwrite: %s', overwrite)
@@ -300,7 +315,7 @@ class DuckLoader:
         """
 
         :param cursor: DuckDB connection's cursor
-        :param jenkins_data_directory: directory where all the extracted jenkins' data located.
+        :param jenkins_data_directory: directory where all the extracted jenkins data located.
         """
         self.cursor = cursor
         self.data_directory = jenkins_data_directory
@@ -318,7 +333,7 @@ class DuckLoader:
         into a DuckDB
         :param job_dir: Job directory contains json files and csv files
         :param jenkins_domain_name: identify which jenkins server to import
-        :param data_dir: JenkinsData extracted root directory which contains all jenkins' server domain names
+        :param data_dir: JenkinsData extracted root directory which contains all jenkins server domain names
         :param cursor: DuckDB connection's cursor
         :param overwrite: True to re-insert, False to skip when a record is existed
         :return:

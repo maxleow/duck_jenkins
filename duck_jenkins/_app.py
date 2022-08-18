@@ -63,7 +63,9 @@ class JenkinsData:
         :return:
         """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
-        logging.info("JenkinsData.pull_upstream - Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
+        logging.info("JenkinsData.pull_upstream - Pulling upstream, file: [%s], existed: %s",
+                     os.path.abspath(json_file),
+                     os.path.exists(json_file))
 
         if not os.path.exists(json_file):
             raise FileNotFoundError(json_file)
@@ -282,7 +284,7 @@ class JenkinsData:
                     else:
                         json_file = None
                         time.sleep(2)
-                        logging.error('JenkinsData._pull - Request failed for: %s %s', project_name, build_number)
+                        logging.error('JenkinsData._pull - Request failed: %s, retrying: %s', get.reason, retry)
                         retry += 1
                         if retry > 5:
                             break

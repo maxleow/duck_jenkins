@@ -63,7 +63,7 @@ class JenkinsData:
         :return:
         """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
-        logging.info("Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
+        logging.info("JenkinsData.pull_upstream - Pulling upstream, file[%s]: %s", json_file, os.path.exists(json_file))
 
         if not os.path.exists(json_file):
             raise FileNotFoundError(json_file)
@@ -71,7 +71,7 @@ class JenkinsData:
         while True:
             cause = upstream_lookup(json_file)
             if cause and cause.get('upstreamProject') and cause.get('upstreamBuild'):
-                logging.info("Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
+                logging.info("JenkinsData.pull_upstream - Found upstream build: %s %s", cause['upstreamProject'], cause['upstreamBuild'])
                 files = self.pull(
                     project_name=cause['upstreamProject'],
                     build_number=cause['upstreamBuild'],
@@ -80,14 +80,14 @@ class JenkinsData:
                 )
                 if not recursive or not files[0]:
                     logging.info(
-                        "Upstream recursive pull exit: [recursive=%s], [file_exist=%s]",
+                        "JenkinsData.pull_upstream - Upstream recursive pull exit: [recursive=%s], [file_exist=%s]",
                         recursive,
                         files[0]
                     )
                     break
                 json_file = files[0]
             else:
-                logging.info("No upstream build in file: %s", json_file)
+                logging.info("JenkinsData.pull_upstream - No upstream build in file: %s", json_file)
                 break
 
     def pull_previous(
@@ -127,14 +127,14 @@ class JenkinsData:
             )
 
             if files[2] and not overwrite:
-                logging.info('Build exist exiting: %s', previous_build)
+                logging.info('JenkinsData.pull_previous - Build exist exiting: %s', previous_build)
                 break
 
             if files[0]:
                 previous_builds.append(previous_build)
             else:
                 trial -= 1
-                logging.info('Build missing with remaining trial: %s, build: %s', trial, previous_build)
+                logging.info('JenkinsData.pull_previous - Build missing with remaining trial: %s, build: %s', trial, previous_build)
                 if trial == 0:
                     break
 
@@ -145,6 +145,7 @@ class JenkinsData:
 
         if upstream:
             for b in previous_builds:
+                logging.info("JenkinsData.pull_previous - Processing upstreams from build: %s", b)
                 self.pull_upstream(
                     project_name=project_name,
                     build_number=b,
@@ -183,7 +184,7 @@ class JenkinsData:
             raise FileNotFoundError(json_file)
 
         artifacts = json_lookup(json_file, '$.artifacts')
-        logging.info('Artifacts size: %s', len(artifacts))
+        logging.info('JenkinsData._pull_artifact - Artifacts size: %s', len(artifacts))
         url = json_lookup(json_file, '$.url')
         build_number = json_lookup(json_file, '$.number')
         target = os.path.dirname(json_file) + f"/{build_number}_artifact.csv"
@@ -195,7 +196,7 @@ class JenkinsData:
                     auth=BasicAuth(auth[0], auth[1])) as resp:
                 html = await resp.text()
                 logging.info(artifact_url)
-                logging.info('downloaded content: %s', len(html))
+                logging.info('JenkinsData._pull_artifact - downloaded content: %s', len(html))
                 try:
                     dfs = pd.read_html(html)
                     if dfs:
@@ -222,7 +223,7 @@ class JenkinsData:
         if overwrite or not os.path.exists(target):
             await fetch(url)
         else:
-            logging.info('skipping existing artifact for build: %s', build_number)
+            logging.info('JenkinsData._pull_artifact - skipping existing artifact for build: %s', build_number)
 
         return target
 
@@ -258,19 +259,33 @@ class JenkinsData:
         )
         artifact_file = None
         exist = os.path.exists(json_file)
-        if overwrite or not exist:
-            get = request(
-                domain_name=domain_name,
-                project_name=project_name,
-                build_number=build_number,
-                auth=auth,
-                verify_ssl=verify_ssl,
+        retry = 0
 
-            )
+        if overwrite or not exist:
+            def _request():
+                return request(
+                    domain_name=domain_name,
+                    project_name=project_name,
+                    build_number=build_number,
+                    auth=auth,
+                    verify_ssl=verify_ssl,
+
+                )
+            get = _request()
             if get.ok:
                 to_json(json_file, get.json())
             else:
-                json_file = None
+                while not get.ok:
+                    get = _request()
+                    if get.ok:
+                        to_json(json_file, get.json())
+                    else:
+                        json_file = None
+                        time.sleep(2)
+                        logging.error('JenkinsData._pull - Request failed for: %s %s', project_name, build_number)
+                        retry += 1
+                        if retry > 5:
+                            break
 
         if artifact:
             artifact_file = asyncio.run(cls._pull_artifact(
@@ -299,7 +314,7 @@ class JenkinsData:
         :return pulled json file, pulled artifact file, is build exist prior pull
         """
         json_file = get_json_file(self.data_directory, self.domain_name, project_name, build_number)
-        logging.info('Json file exist: %s, %s, %s, Overwrite: %s',
+        logging.info('JenkinsData.pull - Json file exist: %s, %s, %s, Overwrite: %s',
                      os.path.exists(json_file), project_name, build_number, overwrite)
 
         return JenkinsData._pull(
@@ -356,22 +371,22 @@ class DuckLoader:
             jenkins = Jenkins.assign_cursor(cursor).factory(jenkins_domain_name)
             job = Job.assign_cursor(cursor).factory(job_name, jenkins.id)
             build = Build.assign_cursor(cursor).select(build_number=build_number, job_id=job.id)
-            logging.info(f"inserting [job_name: {job_name}, build_number: {build_number}]")
+            logging.info(f"DuckLoader.insert_build - inserting [job_name: {job_name}, build_number: {build_number}]")
             if not overwrite and build:
-                logging.info(f'skipping existing build: {build.id}')
+                logging.info(f'DuckLoader.insert_build - skipping existing build: {build.id}')
                 continue
             if overwrite or not build:
                 st = time.time()
                 b = Build.assign_cursor(cursor).insert(file_name, job)
-                logging.debug(f"Execution time: {time.time() - st}s")
+                logging.debug(f"DuckLoader.insert_build - Execution time: {time.time() - st}s")
 
                 st = time.time()
                 Parameter.assign_cursor(cursor).insert(file_name, b.id)
-                logging.debug(f"Execution time: {time.time() - st}s")
+                logging.debug(f"DuckLoader.insert_build - Execution time: {time.time() - st}s")
 
                 st = time.time()
                 Artifact.assign_cursor(cursor).insert(build=b, data_dir=data_dir)
-                logging.debug(f"Execution time: {time.time() - st}s")
+                logging.debug(f"DuckLoader.insert_build - Execution time: {time.time() - st}s")
                 logging.info('---')
 
     def import_into_db(self, jenkins_domain_name: str, overwrite: bool = False):
@@ -384,7 +399,7 @@ class DuckLoader:
         """
 
         job_paths = glob.glob(f"{self.data_directory}/{jenkins_domain_name}/*")
-        logging.debug(job_paths)
+        logging.debug("DuckLoader.import_into_db - " + job_paths)
 
         for job_path in job_paths:
             job_dir = glob.glob(job_path + "/*.json")

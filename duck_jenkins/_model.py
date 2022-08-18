@@ -29,7 +29,7 @@ class Base(BaseModel):
             sql_insert: str
     ):
         def get_obj():
-            logging.debug("SQL> ", sql_select)
+            logging.debug("Base.insert_if_not_exist - SQL> ", sql_select)
 
             def get_result():
                 result = cls.__cursor__.query(sql_select).to_df().to_dict('records')
@@ -44,7 +44,7 @@ class Base(BaseModel):
         obj = get_obj()
         if obj:
             return obj
-        logging.debug("SQL> ", sql_insert)
+        logging.debug("Base.insert_if_not_exist - SQL> ", sql_insert)
         cls.__cursor__.query(sql_insert)
         obj = get_obj()
         assert obj, 'object is None'
@@ -65,7 +65,7 @@ class Base(BaseModel):
     @classmethod
     def select(cls, **kwargs):
         sql = cls.select_query(**kwargs)
-        logging.debug("SQL> %s", sql)
+        logging.debug("Base.select - SQL> %s", sql)
         try:
             result = cls.__cursor__.query(sql).to_df().to_dict('records')
         except RuntimeError:
@@ -314,9 +314,9 @@ class Build(Base):
 
         causes_extracted = Cause.assign_cursor(cls.__cursor__).extract(json_file, job.jenkins_id)
 
-        logging.info("+ Build [build_number: %s, result: (%s), duration: %s, timestamp: %s, previous_build: %s]",
+        logging.info("Build.insert - Build [build_number: %s, result: (%s), duration: %s, timestamp: %s, previous_build: %s]",
                      build_number, result_obj, duration, timestamp, previous_build_number)
-        logging.info("+ Cause [%s]", causes_extracted)
+        logging.info("Build.insert - Cause [%s]", causes_extracted)
         return cls.factory(
             job=job,
             build_number=build_number,
@@ -456,12 +456,12 @@ class Artifact(Base):
             return
 
         if cls.select(build_id=build.id):
-            logging.info(f"skipping inserted build: {build.id}")
+            logging.info(f"Artifact.insert - skipping inserted build: {build.id}")
             return
         try:
             df = pd.read_csv(_dir)
         except EmptyDataError:
-            logging.info("Skipping empty content artifact: %s", _dir)
+            logging.info("Artifact.insert - Skipping empty content artifact: %s", _dir)
             return
 
         df['build_id'] = build.id

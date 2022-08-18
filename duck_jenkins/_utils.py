@@ -24,19 +24,20 @@ def json_lookup(file: str, jpath: str) -> List[str]:
     return values
 
 
-def to_json(filename: str, data: str):
+def to_json(filename: str, data: str) -> bool:
     """
-    Serialize JSON content into a file.
-
+    Serialize JSON content into a file
     :param filename: file name
     :param data: Content in JSON format
-    :return:
+    :return: True if file exist, False otherwise.
     """
     _dir = os.path.dirname(filename)
     if not os.path.exists(_dir):
         os.makedirs(_dir)
     with open(filename, 'w') as fp:
         json.dump(data, fp)
+
+    return os.path.exists(filename)
 
 
 def get_json_file(
@@ -47,7 +48,7 @@ def get_json_file(
 ) -> str:
     """
     Generate the extracted JSON file through domain name, project name and build number
-    :param data_directory: JenkinsData extracted root directory which contains all jenkins' server domain names
+    :param data_directory: JenkinsData extracted root directory which contains all jenkins server domain names
     :param domain_name: used to identify and construct pulling url
     :param project_name: Jenkins's Job name
     :param build_number: build number from the job
@@ -64,7 +65,7 @@ def upstream_lookup(json_file: str):
     """
     jpath = '$.actions[?(@._class=="hudson.model.CauseAction")].causes'
     causes = json_lookup(json_file, jpath)
-    logging.debug(causes)
+    logging.debug("_utils.upstream_lookup - " + causes)
     if causes:
         return causes[-1]
     return None
@@ -88,7 +89,7 @@ def request(
             to a CA bundle to use. Defaults to ``True``.
     :return:
     """
-    logging.info(f"Pulling: {project_name} {build_number}")
+    logging.info(f"_utils.request - Pulling: {project_name} {build_number}")
     url = "https://{}/job/{}/{}/api/json".format(
         domain_name,
         project_name.replace('/', '/job/'),

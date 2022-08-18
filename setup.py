@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="duck-jenkins",
-    version="0.0.22",
+    version="0.0.23",
     install_requires=[
         "duckdb",
         "pandas",

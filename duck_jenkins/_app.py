@@ -89,7 +89,8 @@ class JenkinsData:
                     break
                 json_file = files[0]
             else:
-                logging.info("JenkinsData.pull_upstream - No upstream build in file: %s", json_file)
+                logging.info("JenkinsData.pull_upstream - No upstream build in file: %s",
+                             os.path.abspath(json_file))
                 break
 
     def pull_previous(
@@ -401,7 +402,7 @@ class DuckLoader:
         """
 
         job_paths = glob.glob(f"{self.data_directory}/{jenkins_domain_name}/*")
-        logging.debug("DuckLoader.import_into_db - " + job_paths)
+        logging.debug("DuckLoader.import_into_db - %s", job_paths)
 
         for job_path in job_paths:
             job_dir = glob.glob(job_path + "/*.json")
